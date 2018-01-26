@@ -70,20 +70,81 @@ e.g. by default Grouper will only show you:
 
 With -showLessInteresting turned on, it shows all the 'might be bad'.
 
-## I don't have a lab environment and I don't have a GPO report file handy! I'm also very impatient!
+___
+
+## Questions that I am anticipating
+
+### I don't have a lab environment and I don't have a GPO report file handy! I'm also very impatient!
 I got your back, kid. There's a test_report.xml in the repo that you can try it out with. It's got a bunch of bad settings in it so you can see what that looks like.
 
 You'll need to run it with the -showDisabled flag because it's so full of really awful configurations I didn't even want to enable the GPO in a lab environment.
 
-## I'm even more impatient than that last guy and I demand pretty pictures immediately!
+### I'm even more impatient than that last guy and I demand pretty pictures immediately!
 OK.
 
 ![Screenshot of test output](./test_output.png)
 
-## But wait, how do I figure out which users/computers these policies apply to? Your thing is useless!
+### But wait, how do I figure out which users/computers these policies apply to? Your thing is useless!
 Short Answer: PowerView will do a decent job of this.
 
 Longer Answer: I'll be trying to add this functionality at some point but in the teamtime, shut up and use PowerView.
+
+### I hate one of the checks Grouper does and I never want to see it again.
+
+Cool, easily fixed. 
+
+Pop open grouper.ps1, find the "$polchecks" array and just comment out the line where that check gets added to the array.
+
+Done.
+
+### I want to make Grouper better but I can't make sense of your awful spaghetti-code. Help me help you.
+
+Sure thing, sounds good.
+
+1. Get some GPOReport xml output that includes the type of policy/setting you want Grouper to be able to find. This may require knocking up a suitable policy in a lab environment.
+
+2. Find the \<GPO\> xml object that matches your target policy.
+
+3. Find the subsection of the xml that matches the info you want to pull out of the policy. Policy settings are divided into either User or Computer policy, so this will usually be in either:
+    ```
+    GPO.Computer.ExtensionData.Extension
+    or
+    GPO.User.ExtensionData.Extension
+    ```
+
+4. Now's the annoying part - the reason this code is such a mess is that each policy setting section is structured differently and they use wildly differing naming conventions, so you're going to need to figure out how your target policy is structured. Good luck?
+
+6. Here's a skeleton of a check function you can use to get started. Make sure it either doesn't return at all or returns $null if nothing interesting is found.
+
+    ```
+    Function Get-GPOThing {
+        [cmdletbinding()]
+        Param ($polXml)
+
+    	$settingsThings = ($polXml.ThingSettings.Things | Sort-Object   GPOSettingOrder)
+
+        if ($settingsThings) {
+    	    foreach ($setting in $settingsThings) {
+                $output = @{}
+                $output.Add("ThingName", $setting.Name)
+                $output.Add("ThingDescription",     $setting.properties.Description)
+                $output.Add("ThingAnnoyingEdgeCase",    $setting.properties.edgecase.InnerText)
+                $output
+
+            }
+        }
+    }
+    ```
+
+7. Ctrl-f your way down to "$polchecks" and add it to the array of checks with the others.
+
+8. Test it out.
+
+9. If it works, submit a pull request!
+
+10. If you get stuck, hit me up. I'll try to help if I can scrounge a few minutes together.
+
+___
 
 ## Credits, complaints, comments, death threats, errata
 
@@ -96,7 +157,6 @@ Speaking of shitty code, yes I know this is a bit of a mess. I've tried to make 
 ## TODO
 
 * Add explanations to each check function to provide guidance on what to look for to see if a thing is vulnerable, how to exploit vulnerable configs, etc.
-* Document how to add extra check functions, etc.
 * Remove reliance on RSAT/Group Policy cmdlets to generate the initial report or fold the required code into this script so it can be run on any machine with PS installed.
 * Implement more checks to separate 'could be bad' configurations from 'almost certainly bad'.
 * Implement checks for some of the more common non-default Group Policy templates, e.g. MS Office, Citrix, etc.

@@ -87,7 +87,7 @@ OK.
 ### But wait, how do I figure out which users/computers these policies apply to? Your thing is useless!
 Short Answer: PowerView will do a decent job of this.
 
-Longer Answer: I'll be trying to add this functionality at some point but in the teamtime, shut up and use PowerView.
+Longer Answer: I'll be trying to add this functionality at some point but in the meantime, shut up and use PowerView.
 
 ### I hate one of the checks Grouper does and I never want to see it again.
 

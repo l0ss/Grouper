@@ -4,8 +4,8 @@
 .SYNOPSIS
     Consumes a Get-GPOReport XML formatted report and outputs potentially vulnerable settings.
 .DESCRIPTION
-    Cpassword decryption function stolen shamelessly from @harmj0y
-    Other small snippets and ideas stolen shamelessly from @sysophost
+    GPP cpassword decryption function stolen shamelessly from @harmj0y
+    Other small snippets and ideas stolen shamelessly from @sysop_host
 .EXAMPLE
     So first you need to generate a report on a machine with the Group Policy PS module installed. Do that like this:
 
@@ -21,7 +21,7 @@
         * ALL the user rights that have been assigned, not just the ones likely to get you admin.
         * ALL the users that have been created by group policy preferences, not just the ones that have GPP Passwords set.
     
-    -lazyMode will run the initial generation of the GPOReport for you but will need to be running as a domain user on a domain-joined machine.
+    -lazyMode (without -Path) will run the initial generation of the GPOReport for you but will need to be running as a domain user on a domain-joined machine.
 .NOTES
      Author     : Mike Loss - mike@mikeloss.net
 #>
@@ -715,10 +715,10 @@ Function Invoke-AuditGPO {
     $polchecks += {Get-GPOIniFiles -polXML $userSettings -PolicyType "User"}
     $polchecks += {Get-GPOEnvVars -polXML $computerSettings -PolicyType "Computer"}
     $polchecks += {Get-GPOEnvVars -polXML $userSettings -PolicyType "User"}
-    #Get-GPOShortcuts -polXml $xmlgpo
+    #Get-GPOShortcuts -polXml $xmlgpo - I thought I wrote this one but I guess I never did. TODO.
     
 
-    # Writes a pretty green header with the report name and some other nice details
+    # Write a pretty green header with the report name and some other nice details
     $headers = @()
     $headers += {'==============================================================='}
     $headers += {'Policy UID: {0}' -f $xmlgpo.Identifier.Identifier.InnerText}
@@ -729,7 +729,7 @@ Function Invoke-AuditGPO {
     $headers += {'Link enabled: {0}' -f $gpoisenabled}
     $headers += {'==============================================================='}
        
-    # in each GPO we parse, iterate through the list of checks to see if any of them return anything.
+    # In each GPO we parse, iterate through the list of checks to see if any of them return anything.
     $headerprinted = 0
     foreach ($polcheck in $polchecks) {
         $finding = & $polcheck # run the check and store the output
@@ -742,35 +742,20 @@ Function Invoke-AuditGPO {
                 foreach ($header in $headers) {
                     & $header
                 }
+
                 # Parse and print out the GPO's Permissions
                 Write-Title -DividerChar "#" -Color "Yellow" -Text "GPO Permissions"
-
-
                 $GPOPermissions = $xmlgpo.SecurityDescriptor.Permissions.TrusteePermissions
-                
                 # an array of permission strings that we just don't care about
                 $boringPerms = @()
                 $boringPerms += "Read"
                 $boringPerms += "Apply Group Policy"
-
                 # an array of users who have RW permissions on GPOs by default, so they're boring too.
                 $boringTrustees = @()
                 $boringTrustees += "Domain Admins"
                 $boringTrustees += "Enterprise Admins"
                 $boringTrustees += "ENTERPRISE DOMAIN CONTROLLERS"
                 $boringTrustees += "SYSTEM"
-
-                #grab the name of the owner user from the GPO
-                $owner = $xmlgpo.SecurityDescriptor.Owner.Name.InnerText
-                #strip off the domain name so we can check it against the $boringtrustees array.
-                $ownershort = ($owner -Split "\\")[1]
-                
-                # check if our owner is interesting. If not, add to $owner hash table
-                if (-Not ($boringTrustees -contains $ownershort)) {
-                    $ownerOutput = @{}
-                    $ownerOutput.Add("Owner", $xmlgpo.SecurityDescriptor.Owner.Name.InnerText)
-                    $ownerOutput
-                }
 
                 # iterate over each permission entry for the GPO
                 foreach ($GPOACE in $GPOPermissions) {
@@ -780,19 +765,16 @@ Function Invoke-AuditGPO {
                     $trusteeSID = $GPOACE.Trustee.SID.InnerText # SID of the account/group it applies to
                     $ACEInteresting = 1 # ACEs are default interesting unless proven boring.
                     $permOutput = @{}
-
-                    # check if our trustee is a default one
+                    # check if our trustee is a 'boring' default one
                     if ($trusteeName) {
                         if ($boringTrustees -Contains $trusteeShortName) {
                             $ACEInteresting = 0
                         }
                     }
-
                     # check if our permission type is boring
                     if ($boringPerms -Contains $ACEType) {
                         $ACEInteresting = 0
                     }
-             
                     # if it's still interesting, 
                     if ($ACEInteresting -eq 1) {
                         #if we have a valid trustee name, add it to the output
@@ -807,9 +789,10 @@ Function Invoke-AuditGPO {
                         $permOutput.Add("Type", $GPOACE.Type.PermissionType)
                         $permOutput.Add("Access", $GPOACE.Standard.GPOGroupedAccessEnum)
                     }
+                #print it
                 $permOutput
                 }
-                # then we set $headerprinted so we don't print it all again
+                # then we set $headerprinted to 1 so we don't print it all again
                 $headerprinted = 1
                 # add one to our tally of policies that were interesting for our final report
                 $Global:interestingpols += 1
@@ -821,7 +804,6 @@ Function Invoke-AuditGPO {
             $finding
         }
     }
-
 	[System.GC]::Collect()
 }
 

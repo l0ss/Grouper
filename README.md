@@ -9,6 +9,7 @@ A PowerShell script for helping to find vulnerable settings in AD Group Policy.
 Grouper is a slightly wobbly PowerShell module designed for pentesters and redteamers (although probably also useful for sysadmins) which sifts through the (usually very noisy) XML output from the Get-GPOReport cmdlet and identifies all the settings defined in Group Policy Objects (GPOs) that might prove useful to someone trying to do something fun/evil.
 
 Examples of the kinds of stuff it finds in GPOs:
+* GPOs which grant modify permissions on the GPO itself to non-default users.
 * Startup and shutdown scripts 
     * arguments and script themselves often include creds.
     * scripts are often stored with permissions that allow you to modify them.
@@ -29,6 +30,8 @@ Examples of the kinds of stuff it finds in GPOs:
 * ... and much more! (well, not very much, but some)
 
 Yes it's pretty rough, but it saves me an enormous amount of time reading through those awful 150MB HTML GPO reports, and if it works for me it might work for you.
+
+Note: While some function names might include the word audit, Groper is explicitly NOT meant to be an exhaustive audit for best practice configurations etc. If you want that, you should be using Microsoft SCT and LGPO.exe or something.
 
 ## Usage
 

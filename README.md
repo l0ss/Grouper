@@ -3,6 +3,7 @@
 A PowerShell script for helping to find vulnerable settings in AD Group Policy.
 
 ![A picture of a fish](./Epinephelus_malabaricus.jpg)
+###### *Photo by Jon Hanson* - <https://www.flickr.com/people/61952179@N00?rb=1> - <https://creativecommons.org/licenses/by-sa/2.0/>
 
 ## Summary
 Grouper is a slightly wobbly PowerShell module designed for pentesters and redteamers (although probably also useful for sysadmins) which sifts through the (usually very noisy) XML output from the Get-GPOReport cmdlet and identifies all the settings defined in Group Policy Objects (GPOs) that might prove useful to someone trying to do something fun/evil.

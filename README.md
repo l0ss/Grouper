@@ -95,6 +95,8 @@ Speaking of shitty code, yes I know this is a bit of a mess. I've tried to make 
 
 ## TODO
 
+* Add explanations to each check function to provide guidance on what to look for to see if a thing is vulnerable, how to exploit vulnerable configs, etc.
+* Document how to add extra check functions, etc.
 * Remove reliance on RSAT/Group Policy cmdlets to generate the initial report or fold the required code into this script so it can be run on any machine with PS installed.
 * Implement more checks to separate 'could be bad' configurations from 'almost certainly bad'.
 * Implement checks for some of the more common non-default Group Policy templates, e.g. MS Office, Citrix, etc.

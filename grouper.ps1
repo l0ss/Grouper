@@ -13,7 +13,7 @@
 
     Then import this module and:
 
-    "Invoke-AuditGPReport -Path C:\temp\gporeport.xml"
+    "Invoke-AuditGPOReport -Path C:\temp\gporeport.xml"
 
     -showDisabled or else by default we just filter out policy objects that aren't enabled or linked anywhere.
 
@@ -688,7 +688,6 @@ Function Write-Title {
 
     $DefForegroundColor = $host.ui.RawUI.ForegroundColor
     $host.ui.RawUI.ForegroundColor = $Color
-    ""
     Write-Output $Text
     $divider = $DividerChar * $Text.Length
     Write-Output $divider
@@ -842,7 +841,7 @@ Function Invoke-AuditGPO {
 	[System.GC]::Collect()
 }
 
-Function Invoke-AuditGPReport {
+Function Invoke-AuditGPOReport {
     [cmdletbinding()]
     param(
         [Parameter(Mandatory=$false)][ValidateScript({Test-Path $_ -PathType 'Leaf'})] [string]$Path,
@@ -895,8 +894,7 @@ Function Invoke-AuditGPReport {
 
     Write-Title -Color "Green" -DividerChar "*" -Text "Stats"
     $stats = @()
-
-  ($xmlgpos.Count, 1 -ne $null)[0]
+    $stats += ('Total GPOs: {0}' -f ($xmlgpos.Count, 1 -ne $null)[0])
     $stats += ('Unlinked GPOs: {0}' -f $unlinkedgpos)
     $stats += ('Interesting GPOs: {0}' -f $interestingpols)
     Write-Output $stats

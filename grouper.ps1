@@ -38,10 +38,14 @@ Function Get-GPOUsers {
     Param ($polXml, $PolicyType)
     
     # Grab an array of the settings we're interested in from the GPO.
-    $settingsUsers = ($polXml.LocalUsersAndGroups.User | Sort-Object GPOSettingOrder)    
+    $settingsUsers = ($polXml.ExtensionData.Extension.LocalUsersAndGroups.User | Sort-Object GPOSettingOrder)    
 
+    "test"
+    $settingsUsers
+    "tested"
     # Check if there's actually anything in the array.
     if ($settingsUsers) {
+        "test2"
         $output = @{}
 
         # Iterate over array of settings, writing out only those we care about.
@@ -77,7 +81,7 @@ Function Get-GPOGroups {
     [cmdletbinding()]
     Param ($polXml, $PolicyType)
     
-	$settingsGroups = ($polXml.LocalUsersAndGroups.Group | Sort-Object GPOSettingOrder)
+	$settingsGroups = ($polXml.ExtensionData.Extension.LocalUsersAndGroups.Group | Sort-Object GPOSettingOrder)
     if ($settingsGroups) {
 	    foreach ($setting in $settingsGroups) {
             $output = @{}
@@ -200,7 +204,7 @@ Function Get-GPOScripts {
     [cmdletbinding()]
     Param ($polXml, $PolicyType)
 
-	$settingsScripts = ($polXml.Script | Sort-Object GPOSettingOrder)
+	$settingsScripts = ($polXml.ExtensionData.Extension.Script | Sort-Object GPOSettingOrder)
 
     if ($settingsScripts) {
 	    foreach ($setting in $settingsScripts) {
@@ -218,7 +222,7 @@ Function Get-GPOFileUpdate {
     [cmdletbinding()]
     Param ($polXml, $PolicyType)
     
-	$settingsFiles = ($polXml.FilesSettings | Sort-Object GPOSettingOrder)
+	$settingsFiles = ($polXml.ExtensionData.Extension.FilesSettings | Sort-Object GPOSettingOrder)
 
     if ($settingsFiles) {
  	    foreach ($setting in $settingsFiles.File) {
@@ -362,7 +366,7 @@ Function Get-GPORegKeys {
 
     $otherkeys = 0 # this gets set to 1 if reg keys we don't give a shit about are found, so we can let the user know there were other keys that weren't shown.
 
-	$settingsRegKeys = ($polXml.RegistrySettings.Registry | Sort-Object GPOSettingOrder)
+	$settingsRegKeys = ($polXml.ExtensionData.Extension.RegistrySettings.Registry | Sort-Object GPOSettingOrder)
 
     $interestingkeys = @()
     $interestingkeys += "Software\Network Associates\ePolicy Orchestrator"
@@ -454,7 +458,7 @@ Function Get-GPOFolders {
     [cmdletbinding()]
     Param ($polXml, $PolicyType)
     
-	$settingsFolders = ($polXml.Folders.Folder | Sort-Object GPOSettingOrder)
+	$settingsFolders = ($polXml.ExtensionData.Extension.Folders.Folder | Sort-Object GPOSettingOrder)
 
     if ($settingsFolders) {
 	    foreach ($setting in $settingsFolders) {
@@ -492,7 +496,7 @@ Function Get-GPOIniFiles {
     [cmdletbinding()]
     Param ($polXml, $PolicyType)
     
-    $settingsIniFiles = ($polXml.IniFiles.Ini | Sort-Object GPOSettingOrder)
+    $settingsIniFiles = ($polXml.ExtensionData.Extension.IniFiles.Ini | Sort-Object GPOSettingOrder)
     
     if ($settingsIniFiles) {
 
@@ -514,7 +518,7 @@ Function Get-GPOEnvVars {
     [cmdletbinding()]
     Param ($polXml, $PolicyType)
     
-	$settingsEnvVars = ($polXml.EnvironmentVariables.EnvironmentVariable | Sort-Object GPOSettingOrder)
+	$settingsEnvVars = ($polXml.ExtensionData.Extension.EnvironmentVariables.EnvironmentVariable | Sort-Object GPOSettingOrder)
     
     if ($settingsEnvVars) {
 
@@ -534,7 +538,7 @@ Function Get-GPORegSettings {
     [cmdletbinding()]
     Param ($polXML, $PolicyType)
 
-	$settingsRegSettings = ($polXml.Computer.ExtensionData.Extension.Policy | Sort-Object GPOSettingOrder)
+	$settingsRegSettings = ($polXml.ExtensionData.Extension.Policy | Sort-Object GPOSettingOrder)
     
     if ($settingsRegSettings) {
 
@@ -686,6 +690,9 @@ Function Invoke-AuditGPO {
         $Global:unlinkedgpos += 1
         return $null
     }
+
+    $computerSettings = $xmlgpo.Computer
+    $userSettings = $xmlgpo.User
 
     # Build an array of all our Get-GPO* check scriptblocks
     $polchecks = @()
@@ -869,3 +876,5 @@ Function Invoke-AuditGPReport {
     $stats
     ""
 }
+
+Invoke-AuditGPReport -Path .\test_report.xml -showDisabled -showLessInteresting

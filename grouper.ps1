@@ -874,6 +874,5 @@ Function Invoke-AuditGPReport {
   ($xmlgpos.Count, 1 -ne $null)[0]
     $stats += ('Unlinked GPOs: {0}' -f $unlinkedgpos)
     $stats += ('Interesting GPOs: {0}' -f $interestingpols)
-    $stats
-    ""
+    Write-Output $stats
 }

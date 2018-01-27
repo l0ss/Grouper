@@ -6,7 +6,7 @@ A PowerShell script for helping to find vulnerable settings in AD Group Policy.
 ###### *Photo by Jon Hanson* - <https://www.flickr.com/people/61952179@N00?rb=1> - <https://creativecommons.org/licenses/by-sa/2.0/>
 
 ## Summary
-Grouper is a slightly wobbly PowerShell module designed for pentesters and redteamers (although probably also useful for sysadmins) which sifts through the (usually very noisy) XML output from the Get-GPOReport cmdlet and identifies all the settings defined in Group Policy Objects (GPOs) that might prove useful to someone trying to do something fun/evil.
+Grouper is a slightly wobbly PowerShell module designed for pentesters and redteamers (although probably also useful for sysadmins) which sifts through the (usually very noisy) XML output from the Get-GPOReport cmdlet (part of Microsoft's Group Policy module) and identifies all the settings defined in Group Policy Objects (GPOs) that might prove useful to someone trying to do something fun/evil.
 
 Examples of the kinds of stuff it finds in GPOs:
 * GPOs which grant modify permissions on the GPO itself to non-default users.
@@ -35,7 +35,7 @@ Note: While some function names might include the word audit, Groper is explicit
 
 ## Usage
 
-Generate a GPO Report on a windows machine with the Group Policy cmdlets installed. 
+Generate a GPO Report on a Windows machine with the Group Policy cmdlets installed. 
 These are installed on Domain Controllers by default, can be installed on Windows clients using RSAT, or can be enabled through the "Add Feature" wizard on Windows servers.
 
 ```
@@ -74,8 +74,56 @@ e.g. by default Grouper will only show you:
 With -showLessInteresting turned on, it shows all the 'might be bad'.
 
 ___
+## Frequently Asked Questions
+
+### I'm on a gig and can't find a domain-joined machine that I have access to with the Group Policy cmdlets installed and I don't want to install them because that's noisy and messy!
+
+Get-GPOReport works just fine on non-domain-joined machines via runas /netonly. You'll need some low-priv creds but that's to be expected. 
+
+Do like this:
+
+```
+runas /netonly /user:domain\user powershell.exe
+````
+
+on a non-domain-joined machine that can communicate with a domain controller.
+
+Then in the resulting PowerShell session do like this:
+
+```
+Get-GpoReport -Domain example.com -All -ReportType xml -Path C:\temp\gporeport.xml
+```
+
+Easy.
+
+### I don't trust you so I don't want to run your skeevy looking script on a domain-joined machine, but I want to try Grouper.
+
+All Grouper needs to work is PowerShell 2.0 and the xml file output from Get-GPOReport. You can run it on a VM with no network card if you're worried and it'll still work fine.
+
+That said, it's pretty basic code so it shouldn't be hard to see that it's not doing anything remotely sketchy.
+
+### I think it's dumb that you are relying on the MS Group Policy cmdlets/RSAT for Grouper. You should just write it to directly query the domain or parse the policy files straight out of SYSVOL.
+
+Short answer: Yep.
+
+Long answer: Yep, doing one of those things would be better, but there are a couple of things that prevented me from doing them YET.
+
+Ideally I'd like to parse the policy files straight off SYSVOL, but they are stored in a bunch of different file formats, some are proprietary, they're a real pain to read, and I have neither the time nor the inclination to write a bunch of parsers for them from scratch when Microsoft already provide cmdlets that do the job very nicely.
+
+In the not-too-distant future I'd like to bake Microsoft's Get-GPOReport into Grouper, so you wouldn't need RSAT at all, but I need to figure out if that's going to be some kind of copyright violation. I also need to figure out how to actually do that thing I just said.
+___
 
 ## Questions that I am anticipating
+
+### Grouper is showing me all these settings that aren't vulnerable. WTF BRO FALSE POSITIVE MUCH?
+
+Grouper is not a vulnerability scanner. Grouper merely filters the enormous amount of fluff and noise in Group Policy reports to show you only the policy settings that COULD be configured in exploitable ways.
+
+To the extent possible I am working through each of the categories of checks to add in some extra filtering to remove obviously non-vulnerable configurations and reduce the noise levels even further, but Group Policy is extremely flexible and it's pretty difficult to anticipate every possible mistake an admin might make.
+
+### Grouper didn't show me a thing that I know is totally vulnerable in Group Policy. WTF BRO FALSE NEGATIVE MUCH?
+
+Cool, you just found a way to make Grouper better! Scroll down and you'll see where I've provided a little guide to adding new checks to Grouper.
 
 ### I don't have a lab environment and I don't have a GPO report file handy! I'm also very impatient!
 I got your back, kid. There's a test_report.xml in the repo that you can try it out with. It's got a bunch of bad settings in it so you can see what that looks like.

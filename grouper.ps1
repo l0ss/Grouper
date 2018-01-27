@@ -40,12 +40,8 @@ Function Get-GPOUsers {
     # Grab an array of the settings we're interested in from the GPO.
     $settingsUsers = ($polXml.ExtensionData.Extension.LocalUsersAndGroups.User | Sort-Object GPOSettingOrder)    
 
-    "test"
-    $settingsUsers
-    "tested"
     # Check if there's actually anything in the array.
     if ($settingsUsers) {
-        "test2"
         $output = @{}
 
         # Iterate over array of settings, writing out only those we care about.

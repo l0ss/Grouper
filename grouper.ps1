@@ -872,5 +872,3 @@ Function Invoke-AuditGPReport {
     $stats
     ""
 }
-
-Invoke-AuditGPReport -Path .\test_report.xml -showDisabled -showLessInteresting

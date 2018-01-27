@@ -870,7 +870,8 @@ Function Invoke-AuditGPReport {
 
     Write-Title -Color "Green" -DividerChar "*" -Text "Stats"
     $stats = @()
-    $stats += ('Total GPOs: {0}' -f $xmlgpos.Count)
+
+  ($xmlgpos.Count, 1 -ne $null)[0]
     $stats += ('Unlinked GPOs: {0}' -f $unlinkedgpos)
     $stats += ('Interesting GPOs: {0}' -f $interestingpols)
     $stats

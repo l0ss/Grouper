@@ -234,7 +234,7 @@ Function Get-GPOFileUpdate {
             $output.Add("Action", $setting.Properties.action)
             $output.Add("fromPath", $setting.Properties.fromPath)
             $output.Add("targetPath", $setting.Properties.targetPath)
-            Write-Ouput $output
+            Write-Output $output
         }
     }
 }
@@ -302,7 +302,7 @@ Function Get-GPOSecurityOptions {
                 $keynameisint = 0
 
                 #Check if it's one of the ones we care about
-                if (intKeyNames -contains $KeyName) {
+                if ($intKeyNames -contains $KeyName) {
                   #if it is, don't bother checking the rest
                   $keynameisint = 1
                   break
@@ -742,7 +742,6 @@ Function Invoke-AuditGPO {
     # In each GPO we parse, iterate through the list of checks to see if any of them return anything.
     $headerprinted = 0
     foreach ($polcheck in $polchecks) {
-
         $finding = & $polcheck # run the check and store the output
         if ($finding) {
             # the first time one of the checks returns something, show the user the header with the policy name and so on

@@ -832,7 +832,21 @@ Function Invoke-AuditGPO {
                 $Global:interestingpols += 1
            }
             # Then for each actual finding we write the name of the check function that found something.
-            $polchecktitle = ($polcheck.ToString()).split(" ")[0]
+            $polcheckbits = ($polcheck.ToString()).split(" ")
+            $polchecktitle = $polcheckbits[0]
+            if ($polcheckbits[2] -eq "`$computerSettings") {
+                $polchecktype = "Computer Policy"
+            }
+            elseif ($polcheckbits[2] -eq "`$userSettings") {
+                $polchecktype = "User Policy"
+            }
+            elseif ($polcheckbits[2] -eq "`$xmlgpo") {
+                $polchecktype = "All Policy"
+            }
+            else {
+                $polchecktype = "Farts"
+            }
+            $polchecktitle = "$polchecktitle - $polchecktype"
             Write-Title -DividerChar "#" -Color "Yellow" -Text $polchecktitle
             # Write out the actual finding
             $finding
@@ -892,10 +906,13 @@ Function Invoke-AuditGPOReport {
         }
     }
 
+    $gpocount = ($xmlgpos.Count, 1 -ne $null)[0]
+
     Write-Title -Color "Green" -DividerChar "*" -Text "Stats"
     $stats = @()
-    $stats += ('Total GPOs: {0}' -f ($xmlgpos.Count, 1 -ne $null)[0])
+    $stats += ('Total GPOs: {0}' -f $gpocount)
     $stats += ('Unlinked GPOs: {0}' -f $unlinkedgpos)
     $stats += ('Interesting GPOs: {0}' -f $interestingpols)
+    $stats += ('Boring GPOs: {0}' -f ($gpocount - $interestingpols))
     Write-Output $stats
 }

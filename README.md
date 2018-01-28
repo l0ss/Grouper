@@ -51,7 +51,7 @@ Import-Module grouper.ps1
 Run Grouper.
 
 ```
-Invoke-AuditGPReport -Path C:\temp\gporeport.xml
+Invoke-AuditGPOReport -Path C:\temp\gporeport.xml
 ```
 
 ## Switches

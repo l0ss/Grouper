@@ -13,7 +13,7 @@
 
     Then import this module and:
 
-    "Invoke-AuditGPReport -Path C:\temp\gporeport.xml"
+    "Invoke-AuditGPOReport -Path C:\temp\gporeport.xml"
 
     -showDisabled or else by default we just filter out policy objects that aren't enabled or linked anywhere.
 
@@ -69,6 +69,7 @@ Function Get-GPOUsers {
                 $output.Add("Password", $cpasswordclear)
 
                 Write-Output $output
+                ""
             }
         }
     }
@@ -98,6 +99,7 @@ Function Get-GPOGroups {
                 Write-Output $output
 
             }
+            ""
         }
     }
 }
@@ -138,6 +140,7 @@ Function Get-GPOUserRights {
                 }
                 $output.Add("Members", $members)
                 Write-Output $output
+                ""
             }
         }
     }
@@ -175,6 +178,7 @@ Function Get-GPOSchedTasks {
                         $output.Add("startHour", $trigger.Trigger.startHour)
                         $output.Add("startMinutes", $trigger.Trigger.startMinutes)
                         Write-Output $output
+                        ""
                    }
                }
             }
@@ -196,6 +200,7 @@ Function Get-GPOMSIInstallation {
             $output.Add("Name", $setting.Name)
             $output.Add("Path", $setting.Path)
             Write-Output $output
+            ""
         }
     }
 }
@@ -216,6 +221,7 @@ Function Get-GPOScripts {
             $output.Add("Parameters", $setting.Parameters)
             Write-Output $output
         }
+        ""
     }
 }
 
@@ -235,6 +241,7 @@ Function Get-GPOFileUpdate {
             $output.Add("fromPath", $setting.Properties.fromPath)
             $output.Add("targetPath", $setting.Properties.targetPath)
             Write-Output $output
+            ""
         }
     }
 }
@@ -253,6 +260,7 @@ Function Get-GPOFilePerms {
             $output.Add("Path", $setting.Path)
             $output.Add("SDDL", $setting.SecurityDescriptor.SDDL.innertext)
             Write-Output $output
+            ""
         }
     }
 }
@@ -340,6 +348,7 @@ Function Get-GPOSecurityOptions {
                     }
                     Write-Output $output
                     Write-Output $values.GetEnumerator() | sort -Property Name
+                    ""
                 }
             }
 
@@ -355,6 +364,7 @@ Function Get-GPOSecurityOptions {
                             $output.Add("SettingString", $setting.SettingString)
                         }
                         Write-Output $output
+                        ""
                     }
                 }
             }
@@ -398,6 +408,7 @@ Function Get-GPORegKeys {
 
             if ($interestingkeys -contains $output["Key"]) {
                 Write-Output $output
+                ""
             }
             else {
                 $otherkeys = 1
@@ -409,6 +420,7 @@ Function Get-GPORegKeys {
             $output += "... and other registry keys that didn't match any interesting patterns."
             $output += "Check the policy manually if you're desperate."
             Write-Output $output
+            ""
         }
     }
 }
@@ -429,6 +441,7 @@ Function Get-GPOFolderRedirection {
             $output.Add("Target SID", $setting.Location.SecurityGroup.SID.innertext)
             $output.Add("ID", $setting.Id)
             Write-Output $output
+            ""
         }
     }
 }
@@ -453,6 +466,7 @@ Function Get-GPOAccountSettings {
             }
             $output.Add("Type", $setting.Type)
             Write-Output $output
+            ""
         }
     }
 }
@@ -472,6 +486,7 @@ Function Get-GPOFolders {
             $output.Add("Action", $setting.Properties.action)
             $output.Add("Path", $setting.Properties.path)
             Write-Output $output
+            ""
         }
     }
 }
@@ -493,6 +508,7 @@ Function Get-GPONetworkShares {
             $output.Add("Path", $setting.Properties.path)
             $output.Add("Comment", $setting.Properties.comment)
             Write-Output $output
+            ""
         }
     }
 }
@@ -516,6 +532,7 @@ Function Get-GPOIniFiles {
             $output.Add("Property", $setting.Properties.property)
             $output.Add("Action", $setting.Properties.action)
             Write-Output $output
+            ""
         }
     }
 }
@@ -537,6 +554,7 @@ Function Get-GPOEnvVars {
             $output.Add("Value", $setting.properties.value)
             $output.Add("Action", $setting.properties.action)
             Write-Output $output
+            ""
         }
     }
 }
@@ -562,6 +580,7 @@ Function Get-GPORegSettings {
             $output.Add("Category", $setting.Category)
             $output.Add("Explain", $setting.Explain)
             Write-Output $output
+            ""
 
             foreach ($thing in $setting.EditText) {
                 $output = @{}
@@ -569,6 +588,7 @@ Function Get-GPORegSettings {
                 $output.Add("Value", $thing.Value)
                 $output.Add("State", $thing.State)
                 Write-Output $output
+                ""
             }
 
             foreach ($thing in $setting.DropDownList) {
@@ -577,6 +597,7 @@ Function Get-GPORegSettings {
                 $output.Add("Value", $thing.Value)
                 $output.Add("State", $thing.State)
                 Write-Output $output
+                ""
             }
 
             foreach ($thing in $setting.ListBox) {
@@ -594,6 +615,7 @@ Function Get-GPORegSettings {
                 }
                 $output.Add("Data", $data)
                 Write-Output $output
+                ""
             }
 
             foreach ($thing in $setting.Checkbox) {
@@ -601,6 +623,7 @@ Function Get-GPORegSettings {
                 $output.Add("Value", $thing.Name)
                 $output.Add("State", $thing.State)
                 Write-Output $output
+                ""
             }
 
             foreach ($thing in $setting.Numeric) {
@@ -609,6 +632,7 @@ Function Get-GPORegSettings {
                 $output.Add("Value", $thing.Value)
                 $output.Add("State", $thing.State)
                 Write-Output $output
+                ""
             }
         }
     }
@@ -693,7 +717,7 @@ Function Invoke-AuditGPO {
         return $null
     }
 
-    #define settings groups
+    # Define settings groups so we can send through both if the same type of policy settings can appear in either.
     $computerSettings = $xmlgpo.Computer
     $userSettings = $xmlgpo.User
 
@@ -808,7 +832,21 @@ Function Invoke-AuditGPO {
                 $Global:interestingpols += 1
            }
             # Then for each actual finding we write the name of the check function that found something.
-            $polchecktitle = ($polcheck.ToString()).split(" ")[0]
+            $polcheckbits = ($polcheck.ToString()).split(" ")
+            $polchecktitle = $polcheckbits[0]
+            if ($polcheckbits[2] -eq "`$computerSettings") {
+                $polchecktype = "Computer Policy"
+            }
+            elseif ($polcheckbits[2] -eq "`$userSettings") {
+                $polchecktype = "User Policy"
+            }
+            elseif ($polcheckbits[2] -eq "`$xmlgpo") {
+                $polchecktype = "All Policy"
+            }
+            else {
+                $polchecktype = "Farts"
+            }
+            $polchecktitle = "$polchecktitle - $polchecktype"
             Write-Title -DividerChar "#" -Color "Yellow" -Text $polchecktitle
             # Write out the actual finding
             $finding
@@ -817,8 +855,13 @@ Function Invoke-AuditGPO {
 	[System.GC]::Collect()
 }
 
+<<<<<<< HEAD
 Function Invoke-AuditGPReport {
     [cmdletbinding(DefaultParameterSetName='WithoutFile')]
+=======
+Function Invoke-AuditGPOReport {
+    [cmdletbinding()]
+>>>>>>> 9fcd9929fd4288c725df651a02ce1c5a3901e396
     param(
         [Parameter(
           ParameterSetName='WithFile', Mandatory=$true
@@ -886,7 +929,7 @@ Function Invoke-AuditGPReport {
         Get-GPOReport -All -ReportType xml -Path $reportPath
         [xml]$xmldoc = get-content $reportPath
     }
-    elseif ($path){
+    elseif ($Path){
         # get the contents of the report file
         [xml]$xmldoc = get-content $Path
     }
@@ -903,10 +946,13 @@ Function Invoke-AuditGPReport {
         }
     }
 
+    $gpocount = ($xmlgpos.Count, 1 -ne $null)[0]
+
     Write-Title -Color "Green" -DividerChar "*" -Text "Stats"
     $stats = @()
     $stats += ('Total GPOs: {0}' -f ($xmlgpos.Count, 1 -ne $null)[0])
     $stats += ('Unlinked GPOs: {0}' -f $unlinkedgpos)
     $stats += ('Interesting GPOs: {0}' -f $interestingpols)
+    $stats += ('Boring GPOs: {0}' -f ($gpocount - $interestingpols))
     Write-Output $stats
 }

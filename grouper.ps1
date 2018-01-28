@@ -855,13 +855,8 @@ Function Invoke-AuditGPO {
 	[System.GC]::Collect()
 }
 
-<<<<<<< HEAD
 Function Invoke-AuditGPReport {
     [cmdletbinding(DefaultParameterSetName='WithoutFile')]
-=======
-Function Invoke-AuditGPOReport {
-    [cmdletbinding()]
->>>>>>> 9fcd9929fd4288c725df651a02ce1c5a3901e396
     param(
         [Parameter(
           ParameterSetName='WithFile', Mandatory=$true

@@ -844,7 +844,7 @@ Function Invoke-AuditGPO {
                 $polchecktype = "All Policy"
             }
             else {
-                $polchecktype = "Farts"
+                $polchecktype = ""
             }
             $polchecktitle = "$polchecktitle - $polchecktype"
             Write-Title -DividerChar "#" -Color "Yellow" -Text $polchecktitle

@@ -818,13 +818,40 @@ Function Invoke-AuditGPO {
 }
 
 Function Invoke-AuditGPReport {
-    [cmdletbinding()]
+    [cmdletbinding(DefaultParameterSetName='WithoutFile')]
     param(
-        [Parameter(Mandatory=$false)][ValidateScript({Test-Path $_ -PathType 'Leaf'})] [string]$Path,
-        [Parameter(Mandatory=$false)][switch]$showDisabled, # if not set, we filter out GPOs that aren't linked anywhere
-        [Parameter(Mandatory=$false)][switch]$showLessInteresting, # if not set, we filter out a bunch of stuff that is less likely to be abusable
-        [Parameter(Mandatory=$false)][switch]$lazyMode # if you enable this I'll do the Get-GPOReport thing for you.
-        )
+        [Parameter(
+          ParameterSetName='WithFile', Mandatory=$true
+        )]
+        [ValidateScript({if(Test-Path $_ -PathType 'Leaf'){$true}else{Throw "Invalid path given: $_"}})]
+        [ValidateScript({if($_ -Match '\.xml'){$true}else{Throw "Supplied file is not XML: $_"}})]
+        [System.IO.FileInfo]$Path,
+
+        [Parameter(
+          ParameterSetName='WithFile', Mandatory=$false
+        )]
+        [Parameter(
+          ParameterSetName='WithoutFile', Mandatory=$false
+        )]
+        [switch]$showDisabled, # if not set, we filter out GPOs that aren't linked anywhere
+
+        [Parameter(
+          ParameterSetName='WithFile', Mandatory=$false
+        )]
+        [Parameter(
+          ParameterSetName='WithoutFile', Mandatory=$false
+        )]
+        [switch]$showLessInteresting, # if not set, we filter out a bunch of stuff that is less likely to be abusable
+
+        [Parameter(
+          ParameterSetName='WithoutFile', Mandatory=$false
+        )]
+        [switch]$lazyMode = $true # if you enable this I'll do the Get-GPOReport thing for you.
+    )
+
+    if ($PSCmdlet.ParameterSetName -eq 'WithFile') {
+        $lazyMode = $false
+    }
 
     # couple of counters for the stats at the end
     $Global:unlinkedgpos = 0
@@ -848,8 +875,16 @@ Function Invoke-AuditGPReport {
     }
 
     if ($lazyMode) {
-        Get-GPOReport -All -ReportType xml -Path $pwd\gporeport.xml
-        [xml]$xmldoc = get-content $pwd\gporeport.xml
+        $requiredModules = @('GroupPolicy')
+        $requiredModules | Import-Module -Verbose:$false -ErrorAction SilentlyContinue
+        if (($requiredModules | Get-Module) -eq $null) {
+          Write-Warning ('[!] Could not import required modules, confirm the following modules exist on this host: {0}' -f $($requiredModules -join ', '))
+          Break
+        }
+
+        $reportPath = "$($pwd)\gporeport.xml"
+        Get-GPOReport -All -ReportType xml -Path $reportPath
+        [xml]$xmldoc = get-content $reportPath
     }
     elseif ($path){
         # get the contents of the report file
@@ -870,8 +905,7 @@ Function Invoke-AuditGPReport {
 
     Write-Title -Color "Green" -DividerChar "*" -Text "Stats"
     $stats = @()
-
-  ($xmlgpos.Count, 1 -ne $null)[0]
+    $stats += ('Total GPOs: {0}' -f ($xmlgpos.Count, 1 -ne $null)[0])
     $stats += ('Unlinked GPOs: {0}' -f $unlinkedgpos)
     $stats += ('Interesting GPOs: {0}' -f $interestingpols)
     Write-Output $stats

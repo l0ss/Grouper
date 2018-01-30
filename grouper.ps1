@@ -17,20 +17,65 @@
 
     -showDisabled or else by default we just filter out policy objects that aren't enabled or linked anywhere.
 
-    -showLessInteresting will (among other things) show you:
-        * ALL the user rights that have been assigned, not just the ones likely to get you admin.
-        * ALL the users that have been created by group policy preferences, not just the ones that have GPP Passwords set.
+    -Level (1, 2, or 3) - adjusts whether to show everything (1) or only interesting (2) or only definitely vulnerable (3) settings. Defaults to 2.
 
     -lazyMode (without -Path) will run the initial generation of the GPOReport for you but will need to be running as a domain user on a domain-joined machine.
 .NOTES
      Author     : Mike Loss - mike@mikeloss.net
 #>
 
+# TODO ADD TO THIS LIST
+$Global:intPrivLocalGroups = @()
+$Global:intPrivLocalGroups += "Administrators"
+$Global:intPrivLocalGroups += "Backup Operators"
+$Global:intPrivLocalGroups += "Hyper-V Administrators"
+$Global:intPrivLocalGroups += "Power Users"
+$Global:intPrivLocalGroups += "Print Operators"
+$Global:intPrivLocalGroups += "Remote Desktop Users"
+$Global:intPrivLocalGroups += "Remote Management Users"
+
+# TODO ADD TO THIS LIST
+$Global:intLowPrivDomGroups = @()
+$Global:intLowPrivDomGroups += "Domain Users"
+$Global:intLowPrivDomGroups += "Authenticated Users"
+$Global:intLowPrivDomGroups += "Everyone"
+
+# TODO ADD TO THIS LIST
+$Global:intLowPrivLocalGroups = @()
+$Global:intLowPrivLocalGroups = "Users"
+
+# TODO ADD TO THIS LIST
+$Global:intLowPrivGroups = @()
+$Global:intLowPrivGroups += "Domain Users"
+$Global:intLowPrivGroups += "Authenticated Users"
+$Global:intLowPrivGroups += "Everyone"
+$Global:intLowPrivGroups += "Users"
+
+# TODO ADD TO THIS LIST
+$Global:intPrivDomGroups = @()
+$Global:intPrivDomGroups = "Domain Admins"
+$Global:intPrivDomGroups = "Administrators"
+$Global:intPrivDomGroups = "DNS Admins"
+
+# THIS ONE IS FINE
+$Global:intRights = @()
+$Global:intRights += "SeTrustedCredManAccessPrivilege"
+$Global:intRights += "SeTcbPrivilege"
+$Global:intRights += "SeMachineAccountPrivilege"
+$Global:intRights += "SeBackupPrivilege"
+$Global:intRights += "SeCreateTokenPrivilege"
+$Global:intRights += "SeAssignPrimaryTokenPrivilege"
+$Global:intRights += "SeRestorePrivilege"
+$Global:intRights += "SeDebugPrivilege"
+$Global:intRights += "SeTakeOwnershipPrivilege"
+$Global:intRights += "SeCreateGlobalPrivilege"
+$Global:intRights += "SeLoadDriverPrivilege"
+$Global:intRights += "SeRemoteInteractiveLogonRight"
 
 #____________________ GPO Check functions _______________
 
-#There's a whole pile of these functions so I'm only properly commenting this one,
-#and any others that diverge significantly from the 'template'.
+# There's a whole pile of these functions. Each one consumes a single <GPO> object from a Get-GPOReport XML report, 
+# then depending on the -Level parameter it should output interesting/vulnerable/any policy it can process
 
 Function Get-GPOUsers {
     [cmdletbinding()]
@@ -65,6 +110,7 @@ Function Get-GPOUsers {
             $cpasswordcrypt = $setting.properties.cpassword
             if ($cpasswordcrypt) {
                 $GPOisvulnerable = 1
+                $GPOisinteresting = 1
             }
             #if so, or if we're showing boring, show the rest of the setting
             if (($cpasswordcrypt) -Or ($level -le 2)) {
@@ -81,6 +127,7 @@ Function Get-GPOUsers {
 
                 # decrypt it with harmj0y's function
                 $cpasswordclear = Get-DecryptedCpassword -Cpassword $cpasswordcrypt
+
                 # write it out
                 $output.Add("Password", $cpasswordclear)
 
@@ -107,31 +154,43 @@ Function Get-GPOGroups {
 
     ######
     # Description: Checks for changes made to local groups.
-    # Vulnerable: TODO: If Domain Users, Everyone, Authenticated Users, get added to 'interesting groups'.
+    # Vulnerable: If Domain Users, Everyone, Authenticated Users get added to 'interesting groups'.
     # Interesting: Show changes to groups that grant meaningful security-relevant access.
     # Boring: All groups and all changes.
     ######
 
-    $GPOisinteresting = 0
+    $GPOIsInteresting = 0
+    $GPOIsVulnerable = 0
 
     $settingsGroups = ($polXml.ExtensionData.Extension.LocalUsersAndGroups.Group | Sort-Object GPOSettingOrder)
-    
-    $interestingGroups = @()
-    $interestingGroups += ("Administrators")
-    $interestingGroups += ("Backup Operators")
-    $interestingGroups += ("Hyper-V Administrators")
-    $interestingGroups += ("Power Users")
-    $interestingGroups += ("Print Operators")
-    $interestingGroups += ("Remote Desktop Users")
-    $interestingGroups += ("Remote Management Users")
 
     if ($settingsGroups) {
 	    foreach ($setting in $settingsGroups) {
-            $groupname = $setting.properties.groupName
-            if ($interestingGroups -Contains $groupname) {
-                $GPOisinteresting = 1
+            $settingIsInteresting = 0
+            $settingIsVulnerable = 0
+            $groupIsInteresting = 0
+
+            # check if the group being modified is one of the high-priv local groups array, 
+            $groupName = $setting.properties.groupName
+            if ($Global:intPrivLocalGroups -Contains $groupName) {
+                $GPOIsInteresting = 1
+                $settingIsInteresting = 1
+                $groupIsInteresting = 1
             }
-            if ((($interestingGroups -Contains $groupname) -And ($level -eq 2)) -Or ($level -eq 1)) {
+
+            # if it's in that array AND a member being modified is a low-priv domain group, we flag the setting as vulnerable.
+            $groupmembers = $setting.properties.members.member
+            foreach ($groupmember in $groupmembers) {
+                $groupMemberName = $groupmember.name
+                foreach ($lowPrivDomGroup in $Global:intLowPrivDomGroups) {
+                    if (($groupMemberName -match $lowPrivDomGroup) -And ($groupIsInteresting -eq 1)){
+                        $settingIsVulnerable = 1
+                        $GPOIsVulnerable = 1
+                    }
+                }                
+            }
+
+            if ((($settingIsVulnerable -eq 1) -And ($level -le 3)) -Or (($settingIsInteresting -eq 1) -And ($level -le 2)) -Or ($level -eq 1)) {
                 $output = @{}
                 $output.Add("Name", $setting.Name)
                 $output.Add("NewName", $setting.properties.NewName)
@@ -155,6 +214,9 @@ Function Get-GPOGroups {
     if ($GPOisinteresting -eq 1) {
         $Global:interestingPolSettings += 1
     }
+    if ($GPOIsVulnerable -eq 1) {
+        $Global:vulnerablePolSettings += 1
+    }
 }
 
 Function Get-GPOUserRights {
@@ -167,45 +229,54 @@ Function Get-GPOUserRights {
 
     ######
     # Description: Checks for user rights granted to users and groups.
-    # Vulnerable: TODO Only show "Interesting" rights, i.e. those that can be used for local privilege escalation or remote access, 
+    # Vulnerable: Only show "Interesting" rights, i.e. those that can be used for local privilege escalation or remote access, 
     #             and only if they've been assigned to Domain Users, Authenticated Users, or Everyone.
     # Interesting: Only show "Interesting" rights, i.e. those that can be used for local privilege escalation or remote access.
     # Boring: All non-default.
     ######
 
-    $GPOisinteresting = 0
+    $GPOIsInteresting = 0
+    $GPOIsVulnerable = 0 
 
     $uraSettings = ($polXml.Computer.ExtensionData.Extension.UserRightsAssignment)
 
     $uraSettings = ($uraSettings | ? {$_}) #Strips null elements from array - nfi why I was getting so many of these.
 
-    $interestingrights = @()
-    $interestingrights += "SeTrustedCredManAccessPrivilege"
-    $interestingrights += "SeTcbPrivilege"
-    $interestingrights += "SeMachineAccountPrivilege"
-    $interestingrights += "SeBackupPrivilege"
-    $interestingrights += "SeCreateTokenPrivilege"
-    $interestingrights += "SeAssignPrimaryTokenPrivilege"
-    $interestingrights += "SeRestorePrivilege"
-    $interestingrights += "SeDebugPrivilege"
-    $interestingrights += "SeTakeOwnershipPrivilege"
-    $interestingrights += "SeCreateGlobalPrivilege"
-    $interestingrights += "SeLoadDriverPrivilege"
-    $interestingrights += "SeRemoteInteractiveLogonRight"
-
     if ($uraSettings) {
         foreach ($setting in $uraSettings) {
-            $output = @{}
+            $settingIsInteresting = 0
+            $settingIsVulnerable = 0
+            $rightIsInteresting = 0
+
             $userRight = $setting.Name
-            if ($interestingRights -contains $userRight) {
-                $GPOisinteresting = 1
+
+            $members = @()
+            foreach ($member in $setting.Member) {
+                $members += ($member.Name.Innertext)
             }
-            if (($interestingrights -contains $userRight) -And ($level -le 2)) {
-                $output.Add("Right", $userRight)
-                $members = @()
-                foreach ($member in $setting.Member) {
-                   $members += ($member.Name.Innertext)
+
+            # if the right being assigned is in our array of interesting rights, the setting is interesting.
+            if ($Global:intRights -contains $userRight) {
+                $GPOisinteresting = 1
+                $settingIsInteresting = 1
+                $rightIsInteresting = 1
+            }
+
+            # then we construct an array of trustees being granted the right to see if they are in any of our interesting low priv groups.
+            if ($rightIsInteresting) {
+                foreach ($lowPrivGroup in $Global:intLowPrivGroups) {
+                    foreach ($member in $members) {
+                        if ($member -match $lowPrivGroup) {
+                            $GPOIsVulnerable = 1
+                            $settingIsVulnerable = 1
+                        }
+                    }
                 }
+            }
+
+            if ((($settingIsVulnerable -eq 1) -And ($level -le 3)) -Or (($settingIsInteresting) -And ($level -le 2)) -Or ($level -eq 1)) {
+                $output = @{}
+                $output.Add("Right", $userRight)
                 $output.Add("Members", $members)
                 Write-Output $output
                 ""
@@ -215,6 +286,10 @@ Function Get-GPOUserRights {
     
     if ($GPOisinteresting -eq 1) {
         $Global:interestingPolSettings += 1
+    }
+
+    if ($GPOIsVulnerable -eq 1) {
+        $Global:vulnerablePolSettings += 1
     }
 }
 
@@ -246,13 +321,13 @@ Function Get-GPOSchedTasks {
                 $GPOisinteresting = 1
             }
             #see if any arguments have been set
-            $args = $setting.Properties.args
-            if ($args) {
+            $taskArgs = $setting.Properties.args
+            if ($taskArgs) {
                 $GPOisinteresting = 1
             }
 
             #if so, or if we're showing everything, or if there are args and we're at level 2, show the setting.
-            if (($cpasswordcrypt) -Or ($level -eq 1) -Or (($args) -And ($level -eq 2))) {
+            if ((($cpasswordcrypt) -And ($level -le 3)) -Or (($taskArgs) -And ($level -le 2)) -Or ($level -eq 1)) {
                 $output = @{}
                 $output.Add("Name", $setting.Properties.name)
                 $output.Add("runAs", $setting.Properties.runAs)
@@ -536,38 +611,60 @@ Function Get-GPORegKeys {
 
     ######
     # Description: Checks for registry keys being set that may contain sensitive information.
-    # Vulnerable: Any key that matches '$interesting keys'.
+    # Vulnerable: Any key that matches '$intKeys'.
     # Interesting: TODO Also show instances containing the strings 'pass', 'pwd', 'cred', or 'vnc'.
     # Boring: All Registry Keys
     ######
 
     $GPOisinteresting = 0
-
-    $otherkeys = 0 # this gets set to 1 if reg keys we don't give a shit about are found, so we can let the user know there were other keys that weren't shown.
+    $GPOisvulnerable = 0
 
 	$settingsRegKeys = ($polXml.ExtensionData.Extension.RegistrySettings.Registry | Sort-Object GPOSettingOrder)
 
-    $interestingkeys = @()
-    $interestingkeys += "Software\Network Associates\ePolicy Orchestrator"
-    $interestingkeys += "SOFTWARE\FileZilla Server"
-    $interestingkeys += "SOFTWARE\Wow6432Node\FileZilla Server"
-    $interestingkeys += "Software\Wow6432Node\McAfee\DesktopProtection - McAfee VSE"
-    $interestingkeys += "Software\McAfee\DesktopProtection - McAfee VSE"
-    $interestingkeys += "Software\ORL\WinVNC3"
-    $interestingkeys += "Software\ORL\WinVNC3\Default"
-    $interestingkeys += "Software\ORL\WinVNC\Default"
-    $interestingkeys += "Software\RealVNC\WinVNC4"
-    $interestingkeys += "Software\RealVNC\Default"
-    $interestingkeys += "Software\TightVNC\Server"
-    $interestingkeys += "SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon"
+    $vulnKeys = @()
+    $vulnKeys += "Software\Network Associates\ePolicy Orchestrator"
+    $vulnKeys += "SOFTWARE\FileZilla Server"
+    $vulnKeys += "SOFTWARE\Wow6432Node\FileZilla Server"
+    $vulnKeys += "Software\Wow6432Node\McAfee\DesktopProtection - McAfee VSE"
+    $vulnKeys += "Software\McAfee\DesktopProtection - McAfee VSE"
+    $vulnKeys += "Software\ORL\WinVNC3"
+    $vulnKeys += "Software\ORL\WinVNC3\Default"
+    $vulnKeys += "Software\ORL\WinVNC\Default"
+    $vulnKeys += "Software\RealVNC\WinVNC4"
+    $vulnKeys += "Software\RealVNC\Default"
+    $vulnKeys += "Software\TightVNC\Server"
+    $vulnKeys += "SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon"
+
+    $intWords = @()
+    $intWords += "vnc"
+    $intWords += "vpn"
+    $intWords += "pwd"
+    $intWords += "cred"
+    $intWords += "key"
+    $intWords += "pass"
+
 
     if ($settingsRegKeys) {
         foreach ($setting in $settingsRegKeys) {
             $settingkey = $setting.Properties.key
-            if ($interestingkeys -Contains $settingkey) {
-                $GPOisinteresting = 1
+            $settingisInteresting = 0
+            $settingisVulnerable = 0
+
+            if ($vulnKeys -Contains $settingkey) {
+                $GPOisvulnerable = 1
+                $settingisVulnerable = 1
             }
-            if ((($interestingkeys -contains $settingkey) -And ($level -le 3)) -Or ($level -eq 1)) {
+
+            foreach ($intWord in $intWords) {
+                # if either key or value include our interesting words as a substring, mark the setting as interesting
+                if (($settingkey -match $intWord) -Or ($settingValue -match $intWord)) {
+                    $GPOisinteresting = 1
+                    $settingIsInteresting = 1
+                }
+            }
+
+            # if setting matches any of our criteria for printing (combined interest level + output level)
+            if ((($settingisVulnerable -eq 1) -And ($level -le 3)) -Or (($settingisInteresting -eq 1) -And ($level -le 2)) -Or ($level -eq 1)) {
                 $output = @{}
                 $output.Add("Key", $settingkey)
                 $output.Add("Action", $setting.Properties.action)
@@ -577,7 +674,13 @@ Function Get-GPORegKeys {
                 Write-Output $output
                 ""
             }
+
         }
+    }
+
+    # update the global counters
+    if ($GPOisivulnerable -eq 1) {
+        $Global:vulnerablePolSettings += 1
     }
 
     if ($GPOisinteresting -eq 1) {
@@ -627,17 +730,30 @@ Function Get-GPOAccountSettings {
     ######
     # Description: Checks for Account Settings.
     # Vulnerable: TODO
-    # Interesting: TODO Need to generate a list of 'interesting' settings.
+    # Interesting: TODO Add to list of 'interesting' settings. - only has one so far
     # Boring: All Account Settings.
     ######
 
 	$settingsAccount = ($polXml.Computer.ExtensionData.Extension.Account | Sort-Object GPOSettingOrder)
 
+    $GPOisinteresting = 0
+
+    $intAccSettings = @()
+    $intAccSettings += "ClearTextPassword"
+
     if ($settingsAccount) {
 	    foreach ($setting in $settingsAccount) {
-            if ($level -eq 1) {
+            $settingName = $setting.Name
+            $settingisInteresting = 0
+
+            if ($intAccSettings -Contains $settingName) {
+                $settingisInteresting = 1
+                $GPOisInteresting = 1
+            }
+
+            if (($level -eq 1) -Or (($settingisInteresting -eq 1) -And ($level -le 2))) {
                 $output = @{}
-                $output.Add("Name", $setting.Name)
+                $output.Add("Name", $settingName)
                 if ($setting.SettingBoolean) {
                     $output.Add("SettingBoolean", $setting.SettingBoolean)
                 }
@@ -649,6 +765,12 @@ Function Get-GPOAccountSettings {
                 ""
             }
         }
+    }
+
+    # update the global counters
+
+    if ($GPOisinteresting -eq 1) {
+        $Global:interestingPolSettings += 1
     }
 }
 
@@ -695,6 +817,7 @@ Function Get-GPONetworkShares {
     # Interesting: All Network Shares.
     # Boring: All Network Shares.
     ######
+
     $GPOisinteresting = 0
 
 	$settingsNetShares = ($polXml.Computer.ExtensionData.Extension.NetworkShares.Netshare | Sort-Object GPOSettingOrder)
@@ -1048,7 +1171,7 @@ Function Invoke-AuditGPO {
             # the first time one of the checks returns something, show the user the header with the policy name and so on
             if ($headerprinted -ne 1) {
                 # Increment the total counter of displayed policies.
-                $Global:displayedpols += 1
+                $Global:displayedPols += 1
                 # Write the title of the GPO in nice green text
                 Write-Title -DividerChar "*" -Color "Green" -Text $xmlgpo.Name
                 # Write the headers from above
@@ -1057,9 +1180,8 @@ Function Invoke-AuditGPO {
                 }
 
                 # Parse and print out the GPO's Permissions
-                Write-Title -DividerChar "#" -Color "Yellow" -Text "GPO Permissions"
                 $GPOPermissions = $xmlgpo.SecurityDescriptor.Permissions.TrusteePermissions
-                # an array of permission strings that we just don't care about
+                # an array of permissions that aren't exciting
                 $boringPerms = @()
                 $boringPerms += "Read"
                 $boringPerms += "Apply Group Policy"
@@ -1070,24 +1192,28 @@ Function Invoke-AuditGPO {
                 $boringTrustees += "ENTERPRISE DOMAIN CONTROLLERS"
                 $boringTrustees += "SYSTEM"
 
+                $permOutput = @{}
+
                 # iterate over each permission entry for the GPO
                 foreach ($GPOACE in $GPOPermissions) {
                     $ACEType = $GPOACE.Standard.GPOGroupedAccessEnum # allow v deny
                     $trusteeName = $GPOACE.Trustee.Name.InnerText # who does it apply to
-                    $trusteeShortName = ($trusteeName -Split "\\")[1] # strip the domain name off the account so we can compare to boringtrustees.
                     $trusteeSID = $GPOACE.Trustee.SID.InnerText # SID of the account/group it applies to
                     $ACEInteresting = 1 # ACEs are default interesting unless proven boring.
-                    $permOutput = @{}
+
                     # check if our trustee is a 'boring' default one
                     if ($trusteeName) {
-                        if ($boringTrustees -Contains $trusteeShortName) {
-                            $ACEInteresting = 0
+                        foreach ($boringTrustee in $boringTrustees) {
+                            if ($trusteeName -match $boringTrustee) {
+                                $ACEInteresting = 0
+                            }
                         }
                     }
-                    # check if our permission type is boring
-                    if ($boringPerms -Contains $ACEType) {
+                    # check if our permission is boring
+                    if (($boringPerms -Contains $ACEType) -Or ($GPOACE.Type.PermissionType -eq "Deny")){
                         $ACEInteresting = 0
                     }
+
                     # if it's still interesting,
                     if ($ACEInteresting -eq 1) {
                         #if we have a valid trustee name, add it to the output
@@ -1102,14 +1228,15 @@ Function Invoke-AuditGPO {
                         $permOutput.Add("Type", $GPOACE.Type.PermissionType)
                         $permOutput.Add("Access", $GPOACE.Standard.GPOGroupedAccessEnum)
                     }
-                #print it
-                $permOutput
                 }
-                ""
+
+                if ($permOutput.Count -gt 0) {
+                    Write-Title -DividerChar "#" -Color "Yellow" -Text "GPO Permissions"
+                    $permOutput
+                }
+
                 # then we set $headerprinted to 1 so we don't print it all again
                 $headerprinted = 1
-                # add one to our tally of policies that were interesting for our final report
-                $Global:interestingPolSettings += 1
            }
             # Then for each actual finding we write the name of the check function that found something.
             $polcheckbits = ($polcheck.ToString()).split(" ")
@@ -1152,9 +1279,9 @@ Function Invoke-AuditGPOReport {
     $Global:displayedpols = 0
 
     #handle our arguments
-    $Global:showdisabled = 0
+    $Global:showDisabled = 0
     if ($showDisabled) {
-        $Global:showdisabled = 1
+        $Global:showDisabled = 1
     }
 
     if ($lazyMode) {
@@ -1183,8 +1310,8 @@ Function Invoke-AuditGPOReport {
     Write-Title -Color "Green" -DividerChar "*" -Text "Stats"
     $stats = @()
     $stats += ('Display Level: {0}' -f $level)
-    $stats += ('Displayed GPOs: {0}' -f $Global:displayedpols)
-    $stats += ('Unlinked GPOs: {0}' -f $Global:unlinkedpols)
+    $stats += ('Displayed GPOs: {0}' -f $Global:displayedPols)
+    $stats += ('Unlinked GPOs: {0}' -f $Global:unlinkedPols)
     $stats += ('Interesting Policy Settings: {0}' -f $Global:interestingPolSettings)
     $stats += ('Vulnerable Policy Settings: {0}' -f $Global:vulnerablePolSettings)
     $stats += ('Total GPOs: {0}' -f $gpocount)

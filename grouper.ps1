@@ -63,9 +63,6 @@ Function Get-GPOUsers {
 
             #see if we have any stored encrypted passwords
             $cpasswordcrypt = $setting.properties.cpassword
-            "fart"
-            $cpasswordcrypt
-            "farts"
             if ($cpasswordcrypt) {
                 $GPOisvulnerable = 1
             }

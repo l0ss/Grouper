@@ -10,7 +10,7 @@ Grouper is a slightly wobbly PowerShell module designed for pentesters and redte
 
 Examples of the kinds of stuff it finds in GPOs:
 * GPOs which grant modify permissions on the GPO itself to non-default users.
-* Startup and shutdown scripts 
+* Startup and shutdown scripts
     * arguments and script themselves often include creds.
     * scripts are often stored with permissions that allow you to modify them.
 * MSI installers being automatically deployed
@@ -35,7 +35,7 @@ Note: While some function names might include the word audit, Groper is explicit
 
 ## Usage
 
-Generate a GPO Report on a Windows machine with the Group Policy cmdlets installed. 
+Generate a GPO Report on a Windows machine with the Group Policy cmdlets installed.
 These are installed on Domain Controllers by default, can be installed on Windows clients using RSAT, or can be enabled through the "Add Feature" wizard on Windows servers.
 
 ```
@@ -76,13 +76,13 @@ ___
 
 ### I'm on a gig and can't find a domain-joined machine that I have access to with the Group Policy cmdlets installed and I don't want to install them because that's noisy and messy!
 
-Get-GPOReport works just fine on non-domain-joined machines via runas /netonly. You'll need some low-priv creds but that's to be expected. 
+Get-GPOReport works just fine on non-domain-joined machines via runas /netonly. You'll need some low-priv creds but that's to be expected.
 
 Do like this:
 
 ```
 runas /netonly /user:domain\user powershell.exe
-````
+```
 
 on a non-domain-joined machine that can communicate with a domain controller.
 
@@ -140,7 +140,7 @@ Longer Answer: I'll be trying to add this functionality at some point but in the
 
 ### I hate one of the checks Grouper does and I never want to see it again.
 
-Cool, easily fixed. 
+Cool, easily fixed.
 
 Pop open grouper.ps1, find the "$polchecks" array and just comment out the line where that check gets added to the array.
 

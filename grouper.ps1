@@ -61,6 +61,9 @@ Function Get-GPOUsers {
             $cpasswordcrypt = $setting.properties.cpassword
             if ($cpasswordcrypt) {
                 $GPOisvulnerable = 1
+
+                # decrypt it with harmj0y's function
+                $cpasswordclear = Get-DecryptedCpassword -Cpassword $cpasswordcrypt
             }
             #if so, or if we're showing boring, show the rest of the setting
             if (($cpasswordcrypt) -Or ($level -le 2)) {
@@ -74,14 +77,9 @@ Function Get-GPOUsers {
                 $output.Add("neverExpires", $setting.properties.neverExpires)
                 $output.Add("Disabled", $setting.properties.acctDisabled)
                 $output.Add("UserName", $setting.properties.userName)
+                $output.Add("Password", $($cpasswordclear, "Password Not Set" -ne $null)[0])
 
-                # decrypt it with harmj0y's function
-                $cpasswordclear = Get-DecryptedCpassword -Cpassword $cpasswordcrypt
-                # write it out
-                $output.Add("Password", $cpasswordclear)
-
-                Write-Output $output
-                ""
+                Write-Output $output + "`r`n"
             }
         }
     }
@@ -203,8 +201,7 @@ Function Get-GPOUserRights {
                    $members += ($member.Name.Innertext)
                 }
                 $output.Add("Members", $members)
-                Write-Output $output
-                ""
+                Write-Output $output + "`r`n"
             }
         }
     }
@@ -240,6 +237,9 @@ Function Get-GPOSchedTasks {
             if ($cpasswordcrypt) {
                 $GPOisvulnerable = 1
                 $GPOisinteresting = 1
+
+                # decrypt it with harmj0y's function
+                $cpasswordclear = Get-DecryptedCpassword -Cpassword $cpasswordcrypt
             }
             #see if any arguments have been set
             $args = $setting.Properties.args
@@ -252,8 +252,7 @@ Function Get-GPOSchedTasks {
                 $output = @{}
                 $output.Add("Name", $setting.Properties.name)
                 $output.Add("runAs", $setting.Properties.runAs)
-                $cpasswordclear = Get-DecryptedCpassword -Cpassword $cpasswordcrypt
-                $output.Add("Password", $cpasswordclear)
+                $output.Add("Password", $($cpasswordclear, "Password Not Set" -ne $null)[0])
                 $output.Add("Action", $setting.Properties.action)
                 $output.Add("appName", $setting.Properties.appName)
                 $output.Add("args", $setting.Properties.args)
@@ -266,8 +265,7 @@ Function Get-GPOSchedTasks {
                          $output.Add("type", $trigger.Trigger.type)
                          $output.Add("startHour", $trigger.Trigger.startHour)
                          $output.Add("startMinutes", $trigger.Trigger.startMinutes)
-                         Write-Output $output
-                         ""
+                         Write-Output $output + "`r`n"
                     }
                 }
             }
@@ -305,8 +303,7 @@ Function Get-GPOMSIInstallation {
                 $output = @{}
                 $output.Add("Name", $setting.Name)
                 $output.Add("Path", $setting.Path)
-                Write-Output $output
-                ""
+                Write-Output $output + "`r`n"
             }
         }
     }
@@ -335,8 +332,7 @@ Function Get-GPOScripts {
                 $output.Add("Command", $setting.Command)
                 $output.Add("Type", $setting.Type)
                 $output.Add("Parameters", $setting.Parameters)
-                Write-Output $output
-                ""
+                Write-Output $output + "`r`n"
             }
         }
     }
@@ -366,8 +362,7 @@ Function Get-GPOFileUpdate {
                 $output.Add("Action", $setting.Properties.action)
                 $output.Add("fromPath", $setting.Properties.fromPath)
                 $output.Add("targetPath", $setting.Properties.targetPath)
-                Write-Output $output
-                ""
+                Write-Output $output + "`r`n"
             }
         }
     }
@@ -395,8 +390,7 @@ Function Get-GPOFilePerms {
                 $output = @{}
                 $output.Add("Path", $setting.Path)
                 $output.Add("SDDL", $setting.SecurityDescriptor.SDDL.innertext)
-                Write-Output $output
-                ""
+                Write-Output $output + "`r`n"
             }
         }
     }
@@ -511,8 +505,7 @@ Function Get-GPOSecurityOptions {
                     if ($setting.SettingString) {
                         $output.Add("SettingString", $setting.SettingString)
                     }
-                    Write-Output $output
-                    ""
+                    Write-Output $output + "`r`n"
                 }
             }
         }
@@ -570,8 +563,7 @@ Function Get-GPORegKeys {
                 $output.Add("Hive", $setting.Properties.hive)
                 $output.Add("Name", $setting.Properties.name)
                 $output.Add("Value", $setting.Properties.value)
-                Write-Output $output
-                ""
+                Write-Output $output + "`r`n"
             }
         }
     }
@@ -606,8 +598,7 @@ Function Get-GPOFolderRedirection {
                 $output.Add("Target Group", $setting.Location.SecurityGroup.Name.innertext)
                 $output.Add("Target SID", $setting.Location.SecurityGroup.SID.innertext)
                 $output.Add("ID", $setting.Id)
-                Write-Output $output
-                ""
+                Write-Output $output + "`r`n"
             }
         }
     }
@@ -641,8 +632,7 @@ Function Get-GPOAccountSettings {
                     $output.Add("SettingNumber", $setting.SettingNumber)
                 }
                 $output.Add("Type", $setting.Type)
-                Write-Output $output
-                ""
+                Write-Output $output + "`r`n"
             }
         }
     }
@@ -671,8 +661,7 @@ Function Get-GPOFolders {
                 $output.Add("Name", $setting.name)
                 $output.Add("Action", $setting.Properties.action)
                 $output.Add("Path", $setting.Properties.path)
-                Write-Output $output
-                ""
+                Write-Output $output + "`r`n"
             }
         }
     }
@@ -705,8 +694,7 @@ Function Get-GPONetworkShares {
                 $output.Add("PropName", $setting.Properties.name)
                 $output.Add("Path", $setting.Properties.path)
                 $output.Add("Comment", $setting.Properties.comment)
-                Write-Output $output
-                ""
+                Write-Output $output + "`r`n"
             }
         }
     }
@@ -744,8 +732,7 @@ Function Get-GPOIniFiles {
                 $output.Add("Value", $setting.Properties.value)
                 $output.Add("Property", $setting.Properties.property)
                 $output.Add("Action", $setting.Properties.action)
-                Write-Output $output
-                ""
+                Write-Output $output + "`r`n"
             }
         }
     }
@@ -775,8 +762,7 @@ Function Get-GPOEnvVars {
                 $output.Add("Status", $setting.status)
                 $output.Add("Value", $setting.properties.value)
                 $output.Add("Action", $setting.properties.action)
-                Write-Output $output
-                ""
+                Write-Output $output + "`r`n"
             }
         }
     }
@@ -809,16 +795,14 @@ Function Get-GPORegSettings {
                 $output.Add("Supported", $setting.Supported)
                 $output.Add("Category", $setting.Category)
                 $output.Add("Explain", $setting.Explain)
-                Write-Output $output
-                ""
+                Write-Output $output + "`r`n"
 
                 foreach ($thing in $setting.EditText) {
                     $output = @{}
                     $output.Add("Name", $thing.Name)
                     $output.Add("Value", $thing.Value)
                     $output.Add("State", $thing.State)
-                    Write-Output $output
-                    ""
+                    Write-Output $output + "`r`n"
                 }
 
                 foreach ($thing in $setting.DropDownList) {
@@ -826,8 +810,7 @@ Function Get-GPORegSettings {
                     $output.Add("Name", $thing.Name)
                     $output.Add("Value", $thing.Value)
                     $output.Add("State", $thing.State)
-                    Write-Output $output
-                    ""
+                    Write-Output $output + "`r`n"
                 }
 
                 foreach ($thing in $setting.ListBox) {
@@ -844,16 +827,14 @@ Function Get-GPORegSettings {
                         }
                     }
                     $output.Add("Data", $data)
-                    Write-Output $output
-                    ""
+                    Write-Output $output + "`r`n"
                 }
 
                 foreach ($thing in $setting.Checkbox) {
                     $output = @{}
                     $output.Add("Value", $thing.Name)
                     $output.Add("State", $thing.State)
-                    Write-Output $output
-                    ""
+                    Write-Output $output + "`r`n"
                 }
 
                 foreach ($thing in $setting.Numeric) {
@@ -861,8 +842,7 @@ Function Get-GPORegSettings {
                     $output.Add("Name", $thing.Name)
                     $output.Add("Value", $thing.Value)
                     $output.Add("State", $thing.State)
-                    Write-Output $output
-                    ""
+                    Write-Output $output + "`r`n"
                 }
             }
         }
@@ -902,8 +882,7 @@ Function Get-GPOShortcuts {
                 $output.Add("targetPath", $setting.properties.targetPath)
                 $output.Add("iconPath", $setting.properties.iconPath)
                 $output.Add("shortcutPath", $setting.properties.shortcutPath)
-                Write-Output $output
-                ""
+                Write-Output $output + "`r`n"
             }
         }
     }
@@ -915,7 +894,7 @@ Function Get-GPOShortcuts {
 function Get-DecryptedCpassword {
     [CmdletBinding()]
     Param (
-        [string]$Cpassword
+        [Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()][string] $Cpassword
     )
 
     try {
@@ -1108,21 +1087,17 @@ Function Invoke-AuditGPO {
                 $Global:interestingPolSettings += 1
            }
             # Then for each actual finding we write the name of the check function that found something.
-            $polcheckbits = ($polcheck.ToString()).split(" ")
+            $polcheckbits = ($polcheck.ToString()).split(' ')
             $polchecktitle = $polcheckbits[0]
 
-            if ($polcheckbits[4] -eq "`$computerSettings") {
-                $polchecktype = "Computer Policy"
+            Switch ($polcheckbits[4])
+            {
+             '$computerSettings' { $polchecktype = 'Computer Policy'; break }
+             '$userSettings' { $polchecktype = 'User Policy'; break }
+             '$xmlgpo' { $polchecktype = 'All Policy'; break }
+             default {''; break}
             }
-            elseif ($polcheckbits[4] -eq "`$userSettings") {
-                $polchecktype = "User Policy"
-            }
-            elseif ($polcheckbits[4] -eq "`$xmlgpo") {
-                $polchecktype = "All Policy"
-            }
-            else {
-                $polchecktype = ""
-            }
+
             $polchecktitle = "$polchecktitle - $polchecktype"
             Write-Title -DividerChar "#" -Color "Yellow" -Text $polchecktitle
             # Write out the actual finding

@@ -54,24 +54,22 @@ Run Grouper.
 Invoke-AuditGPOReport -Path C:\temp\gporeport.xml
 ```
 
-## Switches
-There's also a couple of switches you can turn on that alter which policy settings Grouper will show you:
-
+## Parameters
+There's also a couple of parameters you can mess with that alter which policy settings Grouper will show you:
 ```
 -showDisabled
 ```
 By default, Grouper will only show you GPOs that are currently enabled and linked to an OU in AD. This toggles that behaviour.
 ```
--showLessInteresting
+-Level
 ```
-By default, if Grouper is able to tell the difference between a 'might be bad' policy setting and an 'almost definitely bad' policy setting, it will only show you 'almost definitely bad'.
+Grouper has 3 levels of filtering you can apply to its output.
 
-e.g. by default Grouper will only show you:
-* a local user account being modified via Group Policy Preferences IF the setting includes credentials. 
-* a registry key being set via Group Policy if it matches a certain set of common keys that store credentials.
-* etc.
+1. Show me all the settings you can.
+2. (Default) Show me only settings that seem 'interesting' but may or may not be vulnerable.
+3. Show me only settings that are definitely a super bad idea and will probably have creds in them or are going to otherwise grant me admin on a host.
 
-With -showLessInteresting turned on, it shows all the 'might be bad'.
+Usage is straightforward. -Level 3, -Level 2, etc.
 
 ___
 ## Frequently Asked Questions
@@ -170,21 +168,39 @@ Sure thing, sounds good.
     ```
     Function Get-GPOThing {
         [cmdletbinding()]
-        Param ($polXml)
+        Param (
+            [Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()]  [System.Xml.XmlElement]$polXML,
+            [Parameter(Mandatory=$true)][ValidateSet(1,2,3)][int]$level
+        )
 
-    	$settingsThings = ($polXml.ThingSettings.Things | Sort-Object   GPOSettingOrder)
+        ######
+        # Description: Checks for Things.
+        # Vulnerable: Description of what it shows if Level -eq 3
+        # Interesting: Description of what it shows if Level -eq 2
+        # Boring: All Things.
+        ######
+
+    	$settingsThings = ($polXml.Thing.ExtensionData.Extension.Thing |  Sort-Object GPOSettingOrder)
 
         if ($settingsThings) {
     	    foreach ($setting in $settingsThings) {
-                $output = @{}
-                $output.Add("ThingName", $setting.Name)
-                $output.Add("ThingDescription",     $setting.properties.Description)
-                $output.Add("ThingAnnoyingEdgeCase",    $setting.properties.edgecase.InnerText)
-                $output
-
+                if ($level -eq 1) {
+                    $output = @{}
+                    $output.Add("Name", $setting.Name)
+                    if ($setting.SettingBoolean) {
+                        $output.Add("SettingBoolean", $setting.SettingBoolean)
+                    }
+                    if ($setting.SettingNumber) {
+                        $output.Add("SettingNumber", $setting.SettingNumber)
+                    }
+                    $output.Add("Type", $setting.Type.InnerText)
+                    Write-Output $output
+                    ""
+                }
             }
         }
     }
+
     ```
 
 7. Ctrl-f your way down to "$polchecks" and add it to the array of checks with the others.

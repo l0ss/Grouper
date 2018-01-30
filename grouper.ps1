@@ -17,10 +17,6 @@
 
     -showDisabled or else by default we just filter out policy objects that aren't enabled or linked anywhere.
 
-    -showLessInteresting will (among other things) show you:
-        * ALL the user rights that have been assigned, not just the ones likely to get you admin.
-        * ALL the users that have been created by group policy preferences, not just the ones that have GPP Passwords set.
-
     -lazyMode (without -Path) will run the initial generation of the GPOReport for you but will need to be running as a domain user on a domain-joined machine.
 .NOTES
      Author     : Mike Loss - mike@mikeloss.net
@@ -1153,14 +1149,6 @@ Function Invoke-AuditGPReport {
           ParameterSetName='WithoutFile', Mandatory=$false
         )]
         [switch]$showDisabled, # if not set, we filter out GPOs that aren't linked anywhere
-
-        [Parameter(
-          ParameterSetName='WithFile', Mandatory=$false
-        )]
-        [Parameter(
-          ParameterSetName='WithoutFile', Mandatory=$false
-        )]
-        [switch]$showLessInteresting, # if not set, we filter out a bunch of stuff that is less likely to be abusable
 
         [Parameter(
           ParameterSetName='WithoutFile', Mandatory=$false

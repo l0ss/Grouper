@@ -75,7 +75,7 @@ $Global:intRights += "SeRemoteInteractiveLogonRight"
 #____________________ GPO Check functions _______________
 
 # There's a whole pile of these functions. Each one consumes a single <GPO> object from a Get-GPOReport XML report,
-# then depending on the -Level parameter it should output interesting/vulnerable/any policy it can process
+# then depending on the -Level parameter it should output interesting/vulnerable/any policy it can process.
 
 Function Get-GPOUsers {
     [cmdletbinding()]
@@ -160,15 +160,6 @@ Function Get-GPOGroups {
 
     $settingsGroups = ($polXml.ExtensionData.Extension.LocalUsersAndGroups.Group | Sort-Object GPOSettingOrder)
 
-    $interestingGroups = @()
-    $interestingGroups += ("Administrators")
-    $interestingGroups += ("Backup Operators")
-    $interestingGroups += ("Hyper-V Administrators")
-    $interestingGroups += ("Power Users")
-    $interestingGroups += ("Print Operators")
-    $interestingGroups += ("Remote Desktop Users")
-    $interestingGroups += ("Remote Management Users")
-
     if ($settingsGroups) {
 	    foreach ($setting in $settingsGroups) {
             $settingIsInteresting = 0
@@ -234,7 +225,7 @@ Function Get-GPOUserRights {
 
     ######
     # Description: Checks for user rights granted to users and groups.
-    # Vulnerable: TODO Only show "Interesting" rights, i.e. those that can be used for local privilege escalation or remote access,
+    # Vulnerable: Only show "Interesting" rights, i.e. those that can be used for local privilege escalation or remote access,
     #             and only if they've been assigned to Domain Users, Authenticated Users, or Everyone.
     # Interesting: Only show "Interesting" rights, i.e. those that can be used for local privilege escalation or remote access.
     # Boring: All non-default.
@@ -673,7 +664,6 @@ Function Get-GPORegKeys {
                 $output.Add("Value", $setting.Properties.value)
                 Write-Output $output + "`r`n"
             }
-
         }
     }
 
@@ -1245,7 +1235,7 @@ Function Invoke-AuditGPO {
 	[System.GC]::Collect()
 }
 
-Function Invoke-AuditGPReport {
+Function Invoke-AuditGPOReport {
     [cmdletbinding(DefaultParameterSetName='WithoutFile')]
     param(
         [Parameter(
@@ -1335,3 +1325,5 @@ Function Invoke-AuditGPReport {
     $stats += ('Total GPOs: {0}' -f $gpocount)
     Write-Output $stats
 }
+
+Invoke-AuditGPOReport -Path Z:\Grouper\test_report.xml -Level 2

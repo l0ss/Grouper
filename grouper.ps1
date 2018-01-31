@@ -1325,5 +1325,3 @@ Function Invoke-AuditGPOReport {
     $stats += ('Total GPOs: {0}' -f $gpocount)
     Write-Output $stats
 }
-
-Invoke-AuditGPOReport -Path Z:\Grouper\test_report.xml -Level 2

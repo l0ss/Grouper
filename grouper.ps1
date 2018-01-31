@@ -74,8 +74,8 @@ $Global:intRights += "SeRemoteInteractiveLogonRight"
 
 #____________________ GPO Check functions _______________
 
-# There's a whole pile of these functions. Each one consumes a single <GPO> object from a Get-GPOReport XML report, 
-# then depending on the -Level parameter it should output interesting/vulnerable/any policy it can process
+# There's a whole pile of these functions. Each one consumes a single <GPO> object from a Get-GPOReport XML report,
+# then depending on the -Level parameter it should output interesting/vulnerable/any policy it can process.
 
 Function Get-GPOUsers {
     [cmdletbinding()]
@@ -110,7 +110,9 @@ Function Get-GPOUsers {
             $cpasswordcrypt = $setting.properties.cpassword
             if ($cpasswordcrypt) {
                 $GPOisvulnerable = 1
-                $GPOisinteresting = 1
+
+                # decrypt it with harmj0y's function
+                $cpasswordclear = Get-DecryptedCpassword -Cpassword $cpasswordcrypt
             }
             #if so, or if we're showing boring, show the rest of the setting
             if (($cpasswordcrypt) -Or ($level -le 2)) {
@@ -124,19 +126,13 @@ Function Get-GPOUsers {
                 $output.Add("neverExpires", $setting.properties.neverExpires)
                 $output.Add("Disabled", $setting.properties.acctDisabled)
                 $output.Add("UserName", $setting.properties.userName)
+                $output.Add("Password", $($cpasswordclear, "Password Not Set" -ne $null)[0])
 
-                # decrypt it with harmj0y's function
-                $cpasswordclear = Get-DecryptedCpassword -Cpassword $cpasswordcrypt
-
-                # write it out
-                $output.Add("Password", $cpasswordclear)
-
-                Write-Output $output
-                ""
+                Write-Output $output + "`r`n"
             }
         }
     }
-    
+
     if ($GPOisinteresting -eq 1) {
         $Global:interestingPolSettings += 1
     }
@@ -170,7 +166,7 @@ Function Get-GPOGroups {
             $settingIsVulnerable = 0
             $groupIsInteresting = 0
 
-            # check if the group being modified is one of the high-priv local groups array, 
+            # check if the group being modified is one of the high-priv local groups array,
             $groupName = $setting.properties.groupName
             if ($Global:intPrivLocalGroups -Contains $groupName) {
                 $GPOIsInteresting = 1
@@ -187,7 +183,7 @@ Function Get-GPOGroups {
                         $settingIsVulnerable = 1
                         $GPOIsVulnerable = 1
                     }
-                }                
+                }
             }
 
             if ((($settingIsVulnerable -eq 1) -And ($level -le 3)) -Or (($settingIsInteresting -eq 1) -And ($level -le 2)) -Or ($level -eq 1)) {
@@ -229,14 +225,14 @@ Function Get-GPOUserRights {
 
     ######
     # Description: Checks for user rights granted to users and groups.
-    # Vulnerable: Only show "Interesting" rights, i.e. those that can be used for local privilege escalation or remote access, 
+    # Vulnerable: Only show "Interesting" rights, i.e. those that can be used for local privilege escalation or remote access,
     #             and only if they've been assigned to Domain Users, Authenticated Users, or Everyone.
     # Interesting: Only show "Interesting" rights, i.e. those that can be used for local privilege escalation or remote access.
     # Boring: All non-default.
     ######
 
     $GPOIsInteresting = 0
-    $GPOIsVulnerable = 0 
+    $GPOIsVulnerable = 0
 
     $uraSettings = ($polXml.Computer.ExtensionData.Extension.UserRightsAssignment)
 
@@ -278,12 +274,11 @@ Function Get-GPOUserRights {
                 $output = @{}
                 $output.Add("Right", $userRight)
                 $output.Add("Members", $members)
-                Write-Output $output
-                ""
+                Write-Output $output + "`r`n"
             }
         }
     }
-    
+
     if ($GPOisinteresting -eq 1) {
         $Global:interestingPolSettings += 1
     }
@@ -319,6 +314,9 @@ Function Get-GPOSchedTasks {
             if ($cpasswordcrypt) {
                 $GPOisvulnerable = 1
                 $GPOisinteresting = 1
+
+                # decrypt it with harmj0y's function
+                $cpasswordclear = Get-DecryptedCpassword -Cpassword $cpasswordcrypt
             }
             #see if any arguments have been set
             $taskArgs = $setting.Properties.args
@@ -331,22 +329,20 @@ Function Get-GPOSchedTasks {
                 $output = @{}
                 $output.Add("Name", $setting.Properties.name)
                 $output.Add("runAs", $setting.Properties.runAs)
-                $cpasswordclear = Get-DecryptedCpassword -Cpassword $cpasswordcrypt
-                $output.Add("Password", $cpasswordclear)
+                $output.Add("Password", $($cpasswordclear, "Password Not Set" -ne $null)[0])
                 $output.Add("Action", $setting.Properties.action)
                 $output.Add("appName", $setting.Properties.appName)
                 $output.Add("args", $setting.Properties.args)
                 $output.Add("startIn", $setting.Properties.startIn)
                 Write-Output $output
-                
+
                 if ($setting.Properties.Triggers) {
                     $output = @{}
                     foreach ($trigger in $setting.Properties.Triggers) {
                          $output.Add("type", $trigger.Trigger.type)
                          $output.Add("startHour", $trigger.Trigger.startHour)
                          $output.Add("startMinutes", $trigger.Trigger.startMinutes)
-                         Write-Output $output
-                         ""
+                         Write-Output $output + "`r`n"
                     }
                 }
             }
@@ -384,8 +380,7 @@ Function Get-GPOMSIInstallation {
                 $output = @{}
                 $output.Add("Name", $setting.Name)
                 $output.Add("Path", $setting.Path)
-                Write-Output $output
-                ""
+                Write-Output $output + "`r`n"
             }
         }
     }
@@ -414,8 +409,7 @@ Function Get-GPOScripts {
                 $output.Add("Command", $setting.Command)
                 $output.Add("Type", $setting.Type)
                 $output.Add("Parameters", $setting.Parameters)
-                Write-Output $output
-                ""
+                Write-Output $output + "`r`n"
             }
         }
     }
@@ -445,8 +439,7 @@ Function Get-GPOFileUpdate {
                 $output.Add("Action", $setting.Properties.action)
                 $output.Add("fromPath", $setting.Properties.fromPath)
                 $output.Add("targetPath", $setting.Properties.targetPath)
-                Write-Output $output
-                ""
+                Write-Output $output + "`r`n"
             }
         }
     }
@@ -458,7 +451,7 @@ Function Get-GPOFilePerms {
         [Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()][System.Xml.XmlElement]$polXML,
         [Parameter(Mandatory=$true)][ValidateSet(1,2,3)][int]$level
     )
-    
+
     ######
     # Description: Checks for changes to local file permissions.
     # Vulnerable: TODO Only show instances where the file is writable by the current user or 'Everyone' or 'Domain Users' or 'Authenticated Users'.
@@ -474,8 +467,7 @@ Function Get-GPOFilePerms {
                 $output = @{}
                 $output.Add("Path", $setting.Path)
                 $output.Add("SDDL", $setting.SecurityDescriptor.SDDL.innertext)
-                Write-Output $output
-                ""
+                Write-Output $output + "`r`n"
             }
         }
     }
@@ -590,8 +582,7 @@ Function Get-GPOSecurityOptions {
                     if ($setting.SettingString) {
                         $output.Add("SettingString", $setting.SettingString)
                     }
-                    Write-Output $output
-                    ""
+                    Write-Output $output + "`r`n"
                 }
             }
         }
@@ -671,10 +662,8 @@ Function Get-GPORegKeys {
                 $output.Add("Hive", $setting.Properties.hive)
                 $output.Add("Name", $setting.Properties.name)
                 $output.Add("Value", $setting.Properties.value)
-                Write-Output $output
-                ""
+                Write-Output $output + "`r`n"
             }
-
         }
     }
 
@@ -713,8 +702,7 @@ Function Get-GPOFolderRedirection {
                 $output.Add("Target Group", $setting.Location.SecurityGroup.Name.innertext)
                 $output.Add("Target SID", $setting.Location.SecurityGroup.SID.innertext)
                 $output.Add("ID", $setting.Id)
-                Write-Output $output
-                ""
+                Write-Output $output + "`r`n"
             }
         }
     }
@@ -761,8 +749,7 @@ Function Get-GPOAccountSettings {
                     $output.Add("SettingNumber", $setting.SettingNumber)
                 }
                 $output.Add("Type", $setting.Type)
-                Write-Output $output
-                ""
+                Write-Output $output + "`r`n"
             }
         }
     }
@@ -797,8 +784,7 @@ Function Get-GPOFolders {
                 $output.Add("Name", $setting.name)
                 $output.Add("Action", $setting.Properties.action)
                 $output.Add("Path", $setting.Properties.path)
-                Write-Output $output
-                ""
+                Write-Output $output + "`r`n"
             }
         }
     }
@@ -832,12 +818,11 @@ Function Get-GPONetworkShares {
                 $output.Add("PropName", $setting.Properties.name)
                 $output.Add("Path", $setting.Properties.path)
                 $output.Add("Comment", $setting.Properties.comment)
-                Write-Output $output
-                ""
+                Write-Output $output + "`r`n"
             }
         }
     }
-    
+
     if ($GPOisinteresting) {
         $Global:interestingPolSettings += 1
     }
@@ -871,8 +856,7 @@ Function Get-GPOIniFiles {
                 $output.Add("Value", $setting.Properties.value)
                 $output.Add("Property", $setting.Properties.property)
                 $output.Add("Action", $setting.Properties.action)
-                Write-Output $output
-                ""
+                Write-Output $output + "`r`n"
             }
         }
     }
@@ -902,8 +886,7 @@ Function Get-GPOEnvVars {
                 $output.Add("Status", $setting.status)
                 $output.Add("Value", $setting.properties.value)
                 $output.Add("Action", $setting.properties.action)
-                Write-Output $output
-                ""
+                Write-Output $output + "`r`n"
             }
         }
     }
@@ -936,16 +919,14 @@ Function Get-GPORegSettings {
                 $output.Add("Supported", $setting.Supported)
                 $output.Add("Category", $setting.Category)
                 $output.Add("Explain", $setting.Explain)
-                Write-Output $output
-                ""
+                Write-Output $output + "`r`n"
 
                 foreach ($thing in $setting.EditText) {
                     $output = @{}
                     $output.Add("Name", $thing.Name)
                     $output.Add("Value", $thing.Value)
                     $output.Add("State", $thing.State)
-                    Write-Output $output
-                    ""
+                    Write-Output $output + "`r`n"
                 }
 
                 foreach ($thing in $setting.DropDownList) {
@@ -953,8 +934,7 @@ Function Get-GPORegSettings {
                     $output.Add("Name", $thing.Name)
                     $output.Add("Value", $thing.Value)
                     $output.Add("State", $thing.State)
-                    Write-Output $output
-                    ""
+                    Write-Output $output + "`r`n"
                 }
 
                 foreach ($thing in $setting.ListBox) {
@@ -971,16 +951,14 @@ Function Get-GPORegSettings {
                         }
                     }
                     $output.Add("Data", $data)
-                    Write-Output $output
-                    ""
+                    Write-Output $output + "`r`n"
                 }
 
                 foreach ($thing in $setting.Checkbox) {
                     $output = @{}
                     $output.Add("Value", $thing.Name)
                     $output.Add("State", $thing.State)
-                    Write-Output $output
-                    ""
+                    Write-Output $output + "`r`n"
                 }
 
                 foreach ($thing in $setting.Numeric) {
@@ -988,8 +966,7 @@ Function Get-GPORegSettings {
                     $output.Add("Name", $thing.Name)
                     $output.Add("Value", $thing.Value)
                     $output.Add("State", $thing.State)
-                    Write-Output $output
-                    ""
+                    Write-Output $output + "`r`n"
                 }
             }
         }
@@ -1029,8 +1006,7 @@ Function Get-GPOShortcuts {
                 $output.Add("targetPath", $setting.properties.targetPath)
                 $output.Add("iconPath", $setting.properties.iconPath)
                 $output.Add("shortcutPath", $setting.properties.shortcutPath)
-                Write-Output $output
-                ""
+                Write-Output $output + "`r`n"
             }
         }
     }
@@ -1042,7 +1018,7 @@ Function Get-GPOShortcuts {
 function Get-DecryptedCpassword {
     [CmdletBinding()]
     Param (
-        [string]$Cpassword
+        [Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()][string] $Cpassword
     )
 
     try {
@@ -1239,21 +1215,17 @@ Function Invoke-AuditGPO {
                 $headerprinted = 1
            }
             # Then for each actual finding we write the name of the check function that found something.
-            $polcheckbits = ($polcheck.ToString()).split(" ")
+            $polcheckbits = ($polcheck.ToString()).split(' ')
             $polchecktitle = $polcheckbits[0]
-            
-            if ($polcheckbits[4] -eq "`$computerSettings") {
-                $polchecktype = "Computer Policy"
+
+            Switch ($polcheckbits[4])
+            {
+             '$computerSettings' { $polchecktype = 'Computer Policy'; break }
+             '$userSettings' { $polchecktype = 'User Policy'; break }
+             '$xmlgpo' { $polchecktype = 'All Policy'; break }
+             default {''; break}
             }
-            elseif ($polcheckbits[4] -eq "`$userSettings") {
-                $polchecktype = "User Policy"
-            }
-            elseif ($polcheckbits[4] -eq "`$xmlgpo") {
-                $polchecktype = "All Policy"
-            }
-            else {
-                $polchecktype = ""
-            }
+
             $polchecktitle = "$polchecktitle - $polchecktype"
             Write-Title -DividerChar "#" -Color "Yellow" -Text $polchecktitle
             # Write out the actual finding
@@ -1264,13 +1236,41 @@ Function Invoke-AuditGPO {
 }
 
 Function Invoke-AuditGPOReport {
-    [cmdletbinding()]
+    [cmdletbinding(DefaultParameterSetName='WithoutFile')]
     param(
-        [Parameter(Mandatory=$false)][ValidateScript({Test-Path $_ -PathType 'Leaf'})] [string]$Path,
-        [Parameter(Mandatory=$false)][switch]$showDisabled, # if not set, we filter out GPOs that aren't linked anywhere
-        [Parameter(Mandatory=$false)][switch]$lazyMode, # if you enable this I'll do the Get-GPOReport thing for you.
-        [Parameter(Mandatory=$false)][ValidateSet(1,2,3)][int]$level = 2 # how interesting a given setting has to be for us to display it.
-        )
+        [Parameter(
+          ParameterSetName='WithFile', Mandatory=$true
+        )]
+        [ValidateScript({if(Test-Path $_ -PathType 'Leaf'){$true}else{Throw "Invalid path given: $_"}})]
+        [ValidateScript({if($_ -Match '\.xml'){$true}else{Throw "Supplied file is not XML: $_"}})]
+        [System.IO.FileInfo]$Path,
+
+        [Parameter(
+          ParameterSetName='WithFile', Mandatory=$false
+        )]
+        [Parameter(
+          ParameterSetName='WithoutFile', Mandatory=$false
+        )]
+        [switch]$showDisabled, # if not set, we filter out GPOs that aren't linked anywhere
+
+        [Parameter(
+          ParameterSetName='WithoutFile', Mandatory=$false
+        )]
+        [switch]$lazyMode = $true, # if you enable this I'll do the Get-GPOReport thing for you.
+
+        [Parameter(
+          ParameterSetName='WithFile', Mandatory=$false
+        )]
+        [Parameter(
+          ParameterSetName='WithoutFile', Mandatory=$false
+        )]
+        [ValidateSet(1,2,3)]
+        [int]$level = 2
+    )
+
+    if ($PSCmdlet.ParameterSetName -eq 'WithFile') {
+        $lazyMode = $false
+    }
 
     # couple of counters for the stats at the end
     $Global:unlinkedpols = 0
@@ -1285,8 +1285,16 @@ Function Invoke-AuditGPOReport {
     }
 
     if ($lazyMode) {
-        Get-GPOReport -All -ReportType xml -Path $pwd\gporeport.xml
-        [xml]$xmldoc = get-content $pwd\gporeport.xml
+        $requiredModules = @('GroupPolicy')
+        $requiredModules | Import-Module -Verbose:$false -ErrorAction SilentlyContinue
+        if (($requiredModules | Get-Module) -eq $null) {
+          Write-Warning ('[!] Could not import required modules, confirm the following modules exist on this host: {0}' -f $($requiredModules -join ', '))
+          Break
+        }
+
+        $reportPath = "$($pwd)\gporeport.xml"
+        Get-GPOReport -All -ReportType xml -Path $reportPath
+        [xml]$xmldoc = get-content $reportPath
     }
     elseif ($Path){
         # get the contents of the report file
@@ -1317,3 +1325,5 @@ Function Invoke-AuditGPOReport {
     $stats += ('Total GPOs: {0}' -f $gpocount)
     Write-Output $stats
 }
+
+Invoke-AuditGPOReport -Path Z:\Grouper\test_report.xml -Level 2

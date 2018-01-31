@@ -127,8 +127,8 @@ Function Get-GPOUsers {
                 $output.Add("Disabled", $setting.properties.acctDisabled)
                 $output.Add("UserName", $setting.properties.userName)
                 $output.Add("Password", $($cpasswordclear, "Password Not Set" -ne $null)[0])
-
-                Write-Output $output "`r`n"
+                Write-NoEmpties -output $output
+                "`r`n"
             }
         }
     }
@@ -192,15 +192,14 @@ Function Get-GPOGroups {
                 $output.Add("NewName", $setting.properties.NewName)
                 $output.Add("Description", $setting.properties.Description)
                 $output.Add("Group Name", $groupName)
-                Write-Output $output
+                Write-NoEmpties -output $output
 
                 foreach ($member in $setting.properties.members.member) {
                     $output = @{}
                     $output.Add("Name", $member.name)
                     $output.Add("Action", $member.action)
                     $output.Add("UserName", $member.userName)
-                    Write-Output $output 
-
+                    Write-NoEmpties -output $output
                 }
                 "`r`n"
             }
@@ -274,7 +273,8 @@ Function Get-GPOUserRights {
                 $output = @{}
                 $output.Add("Right", $userRight)
                 $output.Add("Members", $members)
-                Write-Output $output "`r`n"
+                Write-NoEmpties -output $output
+                "`r`n"
             }
         }
     }
@@ -334,15 +334,16 @@ Function Get-GPOSchedTasks {
                 $output.Add("appName", $setting.Properties.appName)
                 $output.Add("args", $setting.Properties.args)
                 $output.Add("startIn", $setting.Properties.startIn)
-                Write-Output $output
+                Write-NoEmpties -output $output
 
                 if ($setting.Properties.Triggers) {
-                    $output = @{}
                     foreach ($trigger in $setting.Properties.Triggers) {
-                         $output.Add("type", $trigger.Trigger.type)
-                         $output.Add("startHour", $trigger.Trigger.startHour)
-                         $output.Add("startMinutes", $trigger.Trigger.startMinutes)
-                         Write-Output $output "`r`n"
+                        $output = @{}
+                        $output.Add("type", $trigger.Trigger.type)
+                        $output.Add("startHour", $trigger.Trigger.startHour)
+                        $output.Add("startMinutes", $trigger.Trigger.startMinutes)
+                        Write-NoEmpties -output $output 
+                        "`r`n"
                     }
                 }
             }
@@ -380,7 +381,8 @@ Function Get-GPOMSIInstallation {
                 $output = @{}
                 $output.Add("Name", $setting.Name)
                 $output.Add("Path", $setting.Path)
-                Write-Output $output "`r`n"
+                Write-NoEmpties -output $output
+                "`r`n"
             }
         }
     }
@@ -409,7 +411,8 @@ Function Get-GPOScripts {
                 $output.Add("Command", $setting.Command)
                 $output.Add("Type", $setting.Type)
                 $output.Add("Parameters", $setting.Parameters)
-                Write-Output $output "`r`n"
+                Write-NoEmpties -output $output 
+                "`r`n"
             }
         }
     }
@@ -439,7 +442,8 @@ Function Get-GPOFileUpdate {
                 $output.Add("Action", $setting.Properties.action)
                 $output.Add("fromPath", $setting.Properties.fromPath)
                 $output.Add("targetPath", $setting.Properties.targetPath)
-                Write-Output $output "`r`n"
+                Write-NoEmpties -output $output
+                "`r`n"
             }
         }
     }
@@ -467,7 +471,8 @@ Function Get-GPOFilePerms {
                 $output = @{}
                 $output.Add("Path", $setting.Path)
                 $output.Add("SDDL", $setting.SecurityDescriptor.SDDL.innertext)
-                Write-Output $output "`r`n"
+                Write-NoEmpties -output $output
+                "`r`n"
             }
         }
     }
@@ -563,7 +568,7 @@ Function Get-GPOSecurityOptions {
                            $i = ($i + 1)
                         }
                     }
-                    Write-Output $output
+                    Write-NoEmpties -output $output
                     Write-Output $values.GetEnumerator() | sort -Property Name
                     "`r`n"
                 }
@@ -582,7 +587,8 @@ Function Get-GPOSecurityOptions {
                     if ($setting.SettingString) {
                         $output.Add("SettingString", $setting.SettingString)
                     }
-                    Write-Output $output "`r`n"
+                    Write-NoEmpties -output $output
+                    "`r`n"
                 }
             }
         }
@@ -662,7 +668,8 @@ Function Get-GPORegKeys {
                 $output.Add("Hive", $setting.Properties.hive)
                 $output.Add("Name", $setting.Properties.name)
                 $output.Add("Value", $setting.Properties.value)
-                Write-Output $output "`r`n"
+                Write-NoEmpties -output $output
+                "`r`n"
             }
         }
     }
@@ -702,7 +709,8 @@ Function Get-GPOFolderRedirection {
                 $output.Add("Target Group", $setting.Location.SecurityGroup.Name.innertext)
                 $output.Add("Target SID", $setting.Location.SecurityGroup.SID.innertext)
                 $output.Add("ID", $setting.Id)
-                Write-Output $output "`r`n"
+                Write-NoEmpties -output $output
+                "`r`n"
             }
         }
     }
@@ -749,7 +757,8 @@ Function Get-GPOAccountSettings {
                     $output.Add("SettingNumber", $setting.SettingNumber)
                 }
                 $output.Add("Type", $setting.Type)
-                Write-Output $output "`r`n"
+                Write-NoEmpties -output $output
+                "`r`n"
             }
         }
     }
@@ -784,7 +793,8 @@ Function Get-GPOFolders {
                 $output.Add("Name", $setting.name)
                 $output.Add("Action", $setting.Properties.action)
                 $output.Add("Path", $setting.Properties.path)
-                Write-Output $output "`r`n"
+                Write-NoEmpties -output $output
+                "`r`n"
             }
         }
     }
@@ -818,7 +828,8 @@ Function Get-GPONetworkShares {
                 $output.Add("PropName", $setting.Properties.name)
                 $output.Add("Path", $setting.Properties.path)
                 $output.Add("Comment", $setting.Properties.comment)
-                Write-Output $output "`r`n"
+                Write-NoEmpties -output $output
+                "`r`n"
             }
         }
     }
@@ -856,7 +867,8 @@ Function Get-GPOIniFiles {
                 $output.Add("Value", $setting.Properties.value)
                 $output.Add("Property", $setting.Properties.property)
                 $output.Add("Action", $setting.Properties.action)
-                Write-Output $output "`r`n"
+                Write-NoEmpties -output $output
+                "`r`n"
             }
         }
     }
@@ -886,7 +898,8 @@ Function Get-GPOEnvVars {
                 $output.Add("Status", $setting.status)
                 $output.Add("Value", $setting.properties.value)
                 $output.Add("Action", $setting.properties.action)
-                Write-Output $output "`r`n"
+                Write-NoEmpties -output $output
+                "`r`n"
             }
         }
     }
@@ -919,14 +932,16 @@ Function Get-GPORegSettings {
                 $output.Add("Supported", $setting.Supported)
                 $output.Add("Category", $setting.Category)
                 $output.Add("Explain", $setting.Explain)
-                Write-Output $output "`r`n"
+                Write-NoEmpties -output $output
+                "`r`n"
 
                 foreach ($thing in $setting.EditText) {
                     $output = @{}
                     $output.Add("Name", $thing.Name)
                     $output.Add("Value", $thing.Value)
                     $output.Add("State", $thing.State)
-                    Write-Output $output "`r`n"
+                    Write-NoEmpties -output $output
+                    "`r`n"
                 }
 
                 foreach ($thing in $setting.DropDownList) {
@@ -934,7 +949,8 @@ Function Get-GPORegSettings {
                     $output.Add("Name", $thing.Name)
                     $output.Add("Value", $thing.Value)
                     $output.Add("State", $thing.State)
-                    Write-Output $output "`r`n"
+                    Write-NoEmpties -output $output
+                    "`r`n"
                 }
 
                 foreach ($thing in $setting.ListBox) {
@@ -951,14 +967,16 @@ Function Get-GPORegSettings {
                         }
                     }
                     $output.Add("Data", $data)
-                    Write-Output $output "`r`n"
+                    Write-NoEmpties -output $output 
+                    "`r`n"
                 }
 
                 foreach ($thing in $setting.Checkbox) {
                     $output = @{}
                     $output.Add("Value", $thing.Name)
                     $output.Add("State", $thing.State)
-                    Write-Output $output "`r`n"
+                    Write-NoEmpties -output $output 
+                    "`r`n"
                 }
 
                 foreach ($thing in $setting.Numeric) {
@@ -966,7 +984,8 @@ Function Get-GPORegSettings {
                     $output.Add("Name", $thing.Name)
                     $output.Add("Value", $thing.Value)
                     $output.Add("State", $thing.State)
-                    Write-Output $output "`r`n"
+                    Write-NoEmpties -output $output 
+                    "`r`n"
                 }
             }
         }
@@ -1006,7 +1025,8 @@ Function Get-GPOShortcuts {
                 $output.Add("targetPath", $setting.properties.targetPath)
                 $output.Add("iconPath", $setting.properties.iconPath)
                 $output.Add("shortcutPath", $setting.properties.shortcutPath)
-                Write-Output $output "`r`n"
+                Write-NoEmpties -output $output
+                "`r`n"
             }
         }
     }
@@ -1053,6 +1073,29 @@ function Get-DecryptedCpassword {
     }
 }
 
+Function Write-NoEmpties {
+    Param (
+        $output
+    )
+
+    Foreach ($outpair in $output.GetEnumerator()) {
+                    if (-Not (("", $null) -Contains $outpair.Value)) {
+                        Write-Output ($outpair)
+                    }
+                }
+}
+
+Function Write-ColorText {
+    Param (
+        [Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()][string]$Text,
+        [Parameter(Mandatory=$false)][ValidateSet('Black', 'DarkBlue', 'DarkGreen', 'DarkCyan', 'DarkRed', 'DarkMagenta', 'DarkYellow', 'Gray', 'DarkGray', 'Blue', 'Green', 'Cyan', 'Red', 'Magenta', 'Yellow', 'White', ignorecase=$true)] [string]$Color = $host.ui.RawUI.ForegroundColor
+    )
+    $DefForegroundColor = $host.ui.RawUI.ForegroundColor
+    $host.ui.RawUI.ForegroundColor = $Color
+    Write-Output $Text
+    $host.ui.RawUI.ForegroundColor = $DefForegroundColor
+}
+
 Function Write-Title {
     [cmdletbinding()]
     Param (
@@ -1060,14 +1103,34 @@ Function Write-Title {
         [Parameter(Mandatory=$false)][ValidateSet('Black', 'DarkBlue', 'DarkGreen', 'DarkCyan', 'DarkRed', 'DarkMagenta', 'DarkYellow', 'Gray', 'DarkGray', 'Blue', 'Green', 'Cyan', 'Red', 'Magenta', 'Yellow', 'White', ignorecase=$true)] [string]$Color = $host.ui.RawUI.ForegroundColor,
         [Parameter(Mandatory=$false)][ValidateNotNullOrEmpty()][string]$DividerChar = "-"
     )
-
-    $DefForegroundColor = $host.ui.RawUI.ForegroundColor
-    $host.ui.RawUI.ForegroundColor = $Color
-    Write-Output $Text
+    Write-ColorText -Text $Text -Color $Color
     $divider = $DividerChar * $Text.Length
-    Write-Output $divider
-    $host.ui.RawUI.ForegroundColor = $DefForegroundColor
+    Write-ColorText -Text $divider -Color $Color
 }
+
+Function Write-Banner {
+    Param (
+        [ValidateScript({if(Test-Path $_ -PathType 'Leaf'){$true}else{Throw "Invalid path given: $_"}})]
+        [System.IO.FileInfo]$Path
+    )
+
+    $barf = get-content $Path
+    $barf2 = $barf.split("`r`n")
+
+    $Pattern = ('White','Yellow','Red','Red','DarkRed','DarkRed','White','White')
+    
+    ""
+    ""
+    $i = 0
+    foreach ($barfline in $barf2) {
+        Write-ColorText -Text $barfline -Color $Pattern[$i]
+        $i += 1
+    }
+    ""
+    ""
+}
+
+
 #_____________________________________________________________________
 Function Invoke-AuditGPO {
     [cmdletbinding()]
@@ -1149,7 +1212,7 @@ Function Invoke-AuditGPO {
                 # Increment the total counter of displayed policies.
                 $Global:displayedPols += 1
                 # Write the title of the GPO in nice green text
-                Write-Title -DividerChar "*" -Color "Green" -Text $xmlgpo.Name
+                Write-ColorText -Color "Green" -Text $xmlgpo.Name
                 # Write the headers from above
                 foreach ($header in $headers) {
                     & $header
@@ -1268,6 +1331,8 @@ Function Invoke-AuditGPOReport {
         [int]$level = 2
     )
 
+    Write-Banner -Path .\barf.txt
+
     if ($PSCmdlet.ParameterSetName -eq 'WithFile') {
         $lazyMode = $false
     }
@@ -1326,4 +1391,4 @@ Function Invoke-AuditGPOReport {
     Write-Output $stats
 }
 
-Invoke-AuditGPOReport -Path Z:\Grouper\test_report.xml -Level 2
+Invoke-AuditGPOReport -Path Z:\Grouper\test_report.xml -Level 3

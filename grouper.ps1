@@ -342,7 +342,7 @@ Function Get-GPOSchedTasks {
                         $output.Add("type", $trigger.Trigger.type)
                         $output.Add("startHour", $trigger.Trigger.startHour)
                         $output.Add("startMinutes", $trigger.Trigger.startMinutes)
-                        Write-NoEmpties -output $output 
+                        Write-NoEmpties -output $output
                         "`r`n"
                     }
                 }
@@ -411,7 +411,7 @@ Function Get-GPOScripts {
                 $output.Add("Command", $setting.Command)
                 $output.Add("Type", $setting.Type)
                 $output.Add("Parameters", $setting.Parameters)
-                Write-NoEmpties -output $output 
+                Write-NoEmpties -output $output
                 "`r`n"
             }
         }
@@ -967,7 +967,7 @@ Function Get-GPORegSettings {
                         }
                     }
                     $output.Add("Data", $data)
-                    Write-NoEmpties -output $output 
+                    Write-NoEmpties -output $output
                     "`r`n"
                 }
 
@@ -975,7 +975,7 @@ Function Get-GPORegSettings {
                     $output = @{}
                     $output.Add("Value", $thing.Name)
                     $output.Add("State", $thing.State)
-                    Write-NoEmpties -output $output 
+                    Write-NoEmpties -output $output
                     "`r`n"
                 }
 
@@ -984,7 +984,7 @@ Function Get-GPORegSettings {
                     $output.Add("Name", $thing.Name)
                     $output.Add("Value", $thing.Value)
                     $output.Add("State", $thing.State)
-                    Write-NoEmpties -output $output 
+                    Write-NoEmpties -output $output
                     "`r`n"
                 }
             }
@@ -1111,14 +1111,14 @@ Function Write-Title {
 Function Write-Banner {
 
     $barf = @'
-  .,-:::::/ :::::::..       ...      ...    :::::::::::::. .,:::::: :::::::..   
-,;;-'````'  ;;;;``;;;;   .;;;;;;;.   ;;     ;;; `;;;```.;;;;;;;'''' ;;;;``;;;;  
-[[[   [[[[[[/[[[,/[[['  ,[[     \[[,[['     [[[  `]]nnn]]'  [[cccc   [[[,/[[['  
-"$$c.    "$$ $$$$$$c    $$$,     $$$$$      $$$   $$$""     $$""""   $$$$$$c    
+  .,-:::::/ :::::::..       ...      ...    :::::::::::::. .,:::::: :::::::..
+,;;-'````'  ;;;;``;;;;   .;;;;;;;.   ;;     ;;; `;;;```.;;;;;;;'''' ;;;;``;;;;
+[[[   [[[[[[/[[[,/[[['  ,[[     \[[,[['     [[[  `]]nnn]]'  [[cccc   [[[,/[[['
+"$$c.    "$$ $$$$$$c    $$$,     $$$$$      $$$   $$$""     $$""""   $$$$$$c
  `Y8bo,,,o88o888b "88bo,"888,_ _,88P88    .d888   888o      888oo,__ 888b "88bo,
-   `'YMUP"YMMMMMM   "W"   "YMMMMMP"  "YmmMMMM""   YMMMb     """"YUMMMMMMM   "W" 
-                                                            github.com/mikeloss 
-                                                            @mikeloss            
+   `'YMUP"YMMMMMM   "W"   "YMMMMMP"  "YmmMMMM""   YMMMb     """"YUMMMMMMM   "W"
+                                                            github.com/mikeloss
+                                                            @mikeloss
 '@ -split "`n"
 
     $Pattern = ('White','Yellow','Red','Red','DarkRed','DarkRed','White','White')
@@ -1126,7 +1126,6 @@ Function Write-Banner {
     ""
     foreach ($barfline in $barf) {
         Write-ColorText -Text $barfline -Color $Pattern[$barf.IndexOf($barfline)]
-        $i += 1
     }
 }
 
@@ -1390,4 +1389,3 @@ Function Invoke-AuditGPOReport {
     $stats += ('Total GPOs: {0}' -f $gpocount)
     Write-Output $stats
 }
-

@@ -42,7 +42,7 @@ $Global:intLowPrivDomGroups += "Everyone"
 
 # TODO ADD TO THIS LIST
 $Global:intLowPrivLocalGroups = @()
-$Global:intLowPrivLocalGroups = "Users"
+$Global:intLowPrivLocalGroups += "Users"
 
 # TODO ADD TO THIS LIST
 $Global:intLowPrivGroups = @()
@@ -53,9 +53,9 @@ $Global:intLowPrivGroups += "Users"
 
 # TODO ADD TO THIS LIST
 $Global:intPrivDomGroups = @()
-$Global:intPrivDomGroups = "Domain Admins"
-$Global:intPrivDomGroups = "Administrators"
-$Global:intPrivDomGroups = "DNS Admins"
+$Global:intPrivDomGroups += "Domain Admins"
+$Global:intPrivDomGroups += "Administrators"
+$Global:intPrivDomGroups += "DNS Admins"
 
 # THIS ONE IS FINE
 $Global:intRights = @()

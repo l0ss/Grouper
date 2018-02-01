@@ -1391,4 +1391,3 @@ Function Invoke-AuditGPOReport {
     Write-Output $stats
 }
 
-Invoke-AuditGPOReport -Path Z:\Grouper\test_report.xml -Level 3

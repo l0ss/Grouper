@@ -1109,25 +1109,25 @@ Function Write-Title {
 }
 
 Function Write-Banner {
-    Param (
-        [ValidateScript({if(Test-Path $_ -PathType 'Leaf'){$true}else{Throw "Invalid path given: $_"}})]
-        [System.IO.FileInfo]$Path
-    )
 
-    $barf = get-content $Path
-    $barf2 = $barf.split("`r`n")
+    $barf = @'
+  .,-:::::/ :::::::..       ...      ...    :::::::::::::. .,:::::: :::::::..   
+,;;-'````'  ;;;;``;;;;   .;;;;;;;.   ;;     ;;; `;;;```.;;;;;;;'''' ;;;;``;;;;  
+[[[   [[[[[[/[[[,/[[['  ,[[     \[[,[['     [[[  `]]nnn]]'  [[cccc   [[[,/[[['  
+"$$c.    "$$ $$$$$$c    $$$,     $$$$$      $$$   $$$""     $$""""   $$$$$$c    
+ `Y8bo,,,o88o888b "88bo,"888,_ _,88P88    .d888   888o      888oo,__ 888b "88bo,
+   `'YMUP"YMMMMMM   "W"   "YMMMMMP"  "YmmMMMM""   YMMMb     """"YUMMMMMMM   "W" 
+                                                            github.com/mikeloss 
+                                                            @mikeloss            
+'@ -split "`n"
 
     $Pattern = ('White','Yellow','Red','Red','DarkRed','DarkRed','White','White')
-    
     ""
     ""
-    $i = 0
-    foreach ($barfline in $barf2) {
-        Write-ColorText -Text $barfline -Color $Pattern[$i]
+    foreach ($barfline in $barf) {
+        Write-ColorText -Text $barfline -Color $Pattern[$barf.IndexOf($barfline)]
         $i += 1
     }
-    ""
-    ""
 }
 
 
@@ -1331,7 +1331,7 @@ Function Invoke-AuditGPOReport {
         [int]$level = 2
     )
 
-    Write-Banner -Path .\barf.txt
+    Write-Banner
 
     if ($PSCmdlet.ParameterSetName -eq 'WithFile') {
         $lazyMode = $false
@@ -1390,3 +1390,5 @@ Function Invoke-AuditGPOReport {
     $stats += ('Total GPOs: {0}' -f $gpocount)
     Write-Output $stats
 }
+
+Invoke-AuditGPOReport -Path Z:\Grouper\test_report.xml -Level 3

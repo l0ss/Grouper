@@ -574,7 +574,7 @@ Function Get-GPOSecurityOptions {
                         }
                     }
                     Write-NoEmpties -output $output
-                    Write-Output $values
+                    Write-NoEmpties -output $values
                     "`r`n"
                 }
             }
@@ -1394,3 +1394,4 @@ Function Invoke-AuditGPOReport {
     $stats += ('Total GPOs: {0}' -f $gpocount)
     Write-Output $stats
 }
+

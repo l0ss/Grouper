@@ -42,7 +42,7 @@ $Global:intLowPrivDomGroups += "Everyone"
 
 # TODO ADD TO THIS LIST
 $Global:intLowPrivLocalGroups = @()
-$Global:intLowPrivLocalGroups = "Users"
+$Global:intLowPrivLocalGroups += "Users"
 
 # TODO ADD TO THIS LIST
 $Global:intLowPrivGroups = @()
@@ -53,9 +53,9 @@ $Global:intLowPrivGroups += "Users"
 
 # TODO ADD TO THIS LIST
 $Global:intPrivDomGroups = @()
-$Global:intPrivDomGroups = "Domain Admins"
-$Global:intPrivDomGroups = "Administrators"
-$Global:intPrivDomGroups = "DNS Admins"
+$Global:intPrivDomGroups += "Domain Admins"
+$Global:intPrivDomGroups += "Administrators"
+$Global:intPrivDomGroups += "DNS Admins"
 
 # THIS ONE IS FINE
 $Global:intRights = @()
@@ -547,17 +547,22 @@ Function Get-GPOSecurityOptions {
                     $values = @{}
                     $dispunits = $setting.Display.DisplayUnits
                     if ($dispunits) {
-                        $values.Add("DisplayUnits", $setting.Display.DisplayUnits)
+                        $values.Add("DisplayUnits", $dispunits)
                     }
 
                     $dispbool = $setting.Display.DisplayBoolean
                     if ($dispbool) {
-                        $values.Add("DisplayBoolean", $setting.Display.DisplayBoolean)
+                        $values.Add("DisplayBoolean", $dispbool)
                     }
 
                     $dispnum = $setting.Display.DisplayNumber
                     if ($dispnum) {
-                        $values.Add("DisplayNumber", $setting.Display.DisplayNumber)
+                        $values.Add("DisplayNumber", $dispnum)
+                    }
+
+                    $dispstring = $setting.Display.DisplayString
+                    if ($dispstring) {
+                        $values.Add("DisplayString",$dispstring)
                     }
 
                     $dispstrings = $setting.Display.DisplayStrings.Value
@@ -565,11 +570,11 @@ Function Get-GPOSecurityOptions {
                         $i = 0
                         foreach ($dispstring in $dispstrings) {
                            $values.Add("DisplayString$i", $dispstring)
-                           $i = ($i + 1)
+                           $i += 1
                         }
                     }
                     Write-NoEmpties -output $output
-                    Write-Output $values.GetEnumerator() | sort -Property Name
+                    Write-Output $values
                     "`r`n"
                 }
             }
@@ -764,7 +769,6 @@ Function Get-GPOAccountSettings {
     }
 
     # update the global counters
-
     if ($GPOisinteresting -eq 1) {
         $Global:interestingPolSettings += 1
     }
@@ -1162,34 +1166,34 @@ Function Invoke-AuditGPO {
 
     # Build an array of all our Get-GPO* check scriptblocks
     $polchecks = @()
-    $polchecks += {Get-GPORegKeys -Level $level -polXML $computerSettings}
-    $polchecks += {Get-GPORegKeys -Level $level -polXML $userSettings}
-    $polchecks += {Get-GPOUsers -Level $level -polXML $userSettings}
-    $polchecks += {Get-GPOUsers -Level $level -polXML $computerSettings}
-    $polchecks += {Get-GPOGroups -Level $level -polXML $userSettings}
-    $polchecks += {Get-GPOGroups -Level $level -polXML $computerSettings}
-    $polchecks += {Get-GPOScripts -Level $level -polXML $userSettings}
-    $polchecks += {Get-GPOScripts -Level $level -polXML $computerSettings}
-    $polchecks += {Get-GPOFileUpdate -Level $level -polXML $userSettings}
-    $polchecks += {Get-GPOFileUpdate -Level $level -polXML $computerSettings}
-    $polchecks += {Get-GPOMSIInstallation -Level $level -polXML $xmlgpo}
-    $polchecks += {Get-GPOUserRights -Level $level -polXML $xmlgpo}
-    $polchecks += {Get-GPOSchedTasks -Level $level -polXML $xmlgpo}
-    $polchecks += {Get-GPOFolderRedirection -Level $level -polXML $xmlgpo}
-    $polchecks += {Get-GPOFilePerms -Level $level -polXML $xmlgpo}
+    #$polchecks += {Get-GPORegKeys -Level $level -polXML $computerSettings}
+    #$polchecks += {Get-GPORegKeys -Level $level -polXML $userSettings}
+    #$polchecks += {Get-GPOUsers -Level $level -polXML $userSettings}
+    #$polchecks += {Get-GPOUsers -Level $level -polXML $computerSettings}
+    #$polchecks += {Get-GPOGroups -Level $level -polXML $userSettings}
+    #$polchecks += {Get-GPOGroups -Level $level -polXML $computerSettings}
+    #$polchecks += {Get-GPOScripts -Level $level -polXML $userSettings}
+    #$polchecks += {Get-GPOScripts -Level $level -polXML $computerSettings}
+    #$polchecks += {Get-GPOFileUpdate -Level $level -polXML $userSettings}
+    #$polchecks += {Get-GPOFileUpdate -Level $level -polXML $computerSettings}
+    #$polchecks += {Get-GPOMSIInstallation -Level $level -polXML $xmlgpo}
+    #$polchecks += {Get-GPOUserRights -Level $level -polXML $xmlgpo}
+    #$polchecks += {Get-GPOSchedTasks -Level $level -polXML $xmlgpo}
+    #$polchecks += {Get-GPOFolderRedirection -Level $level -polXML $xmlgpo}
+    #$polchecks += {Get-GPOFilePerms -Level $level -polXML $xmlgpo}
     $polchecks += {Get-GPOSecurityOptions -Level $level -polXML $xmlgpo}
-    $polchecks += {Get-GPOAccountSettings -Level $level -polXML $xmlgpo}
-    $polchecks += {Get-GPONetworkShares -Level $level -polXml $xmlgpo}
-    $polchecks += {Get-GPOFolders -Level $level -polXML $userSettings}
-    $polchecks += {Get-GPOFolders -Level $level -polXML $computerSettings}
-    $polchecks += {Get-GPORegSettings -Level $level -polXML $computerSettings}
-    $polchecks += {Get-GPORegSettings -Level $level -polXML $userSettings}
-    $polchecks += {Get-GPOIniFiles -Level $level -polXML $computerSettings}
-    $polchecks += {Get-GPOIniFiles -Level $level -polXML $userSettings}
-    $polchecks += {Get-GPOEnvVars -Level $level -polXML $computerSettings}
-    $polchecks += {Get-GPOEnvVars -Level $level -polXML $userSettings}
-    $polchecks += {Get-GPOShortcuts -Level $level -polXml $userSettings}
-    $polchecks += {Get-GPOShortcuts -Level $level -polXml $computerSettings}
+    #$polchecks += {Get-GPOAccountSettings -Level $level -polXML $xmlgpo}
+    #$polchecks += {Get-GPONetworkShares -Level $level -polXml $xmlgpo}
+    #$polchecks += {Get-GPOFolders -Level $level -polXML $userSettings}
+    #$polchecks += {Get-GPOFolders -Level $level -polXML $computerSettings}
+    #$polchecks += {Get-GPORegSettings -Level $level -polXML $computerSettings}
+    #$polchecks += {Get-GPORegSettings -Level $level -polXML $userSettings}
+    #$polchecks += {Get-GPOIniFiles -Level $level -polXML $computerSettings}
+    #$polchecks += {Get-GPOIniFiles -Level $level -polXML $userSettings}
+    #$polchecks += {Get-GPOEnvVars -Level $level -polXML $computerSettings}
+    #$polchecks += {Get-GPOEnvVars -Level $level -polXML $userSettings}
+    #$polchecks += {Get-GPOShortcuts -Level $level -polXml $userSettings}
+    #$polchecks += {Get-GPOShortcuts -Level $level -polXml $computerSettings}
 
     # Write a pretty green header with the report name and some other nice details
     $headers = @()
@@ -1390,5 +1394,3 @@ Function Invoke-AuditGPOReport {
     $stats += ('Total GPOs: {0}' -f $gpocount)
     Write-Output $stats
 }
-
-Invoke-AuditGPOReport -Path Z:\Grouper\test_report.xml -Level 3

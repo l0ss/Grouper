@@ -1,0 +1,4 @@
+Get-GPORegSettings - implement filtering - very noisy
+Get-GPORegSettings - fix output of .value, add output for *.extension.policy.dropdownlist.value.name.innertext
+Get-GPOFilePerms - parse SDDL
+Get-GPOAccountSettings - implement filtering

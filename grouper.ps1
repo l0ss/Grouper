@@ -951,7 +951,7 @@ Function Get-GPORegSettings {
                 foreach ($thing in $setting.DropDownList) {
                     $output = @{}
                     $output.Add("Name", $thing.Name)
-                    $output.Add("Value", $thing.Value)
+                    $output.Add("Value", $thing.Value.Name)
                     $output.Add("State", $thing.State)
                     Write-NoEmpties -output $output
                     "`r`n"
@@ -1181,13 +1181,13 @@ Function Invoke-AuditGPO {
     #$polchecks += {Get-GPOSchedTasks -Level $level -polXML $xmlgpo}
     #$polchecks += {Get-GPOFolderRedirection -Level $level -polXML $xmlgpo}
     #$polchecks += {Get-GPOFilePerms -Level $level -polXML $xmlgpo}
-    $polchecks += {Get-GPOSecurityOptions -Level $level -polXML $xmlgpo}
+    #$polchecks += {Get-GPOSecurityOptions -Level $level -polXML $xmlgpo}
     #$polchecks += {Get-GPOAccountSettings -Level $level -polXML $xmlgpo}
     #$polchecks += {Get-GPONetworkShares -Level $level -polXml $xmlgpo}
     #$polchecks += {Get-GPOFolders -Level $level -polXML $userSettings}
     #$polchecks += {Get-GPOFolders -Level $level -polXML $computerSettings}
-    #$polchecks += {Get-GPORegSettings -Level $level -polXML $computerSettings}
-    #$polchecks += {Get-GPORegSettings -Level $level -polXML $userSettings}
+    $polchecks += {Get-GPORegSettings -Level $level -polXML $computerSettings}
+    $polchecks += {Get-GPORegSettings -Level $level -polXML $userSettings}
     #$polchecks += {Get-GPOIniFiles -Level $level -polXML $computerSettings}
     #$polchecks += {Get-GPOIniFiles -Level $level -polXML $userSettings}
     #$polchecks += {Get-GPOEnvVars -Level $level -polXML $computerSettings}

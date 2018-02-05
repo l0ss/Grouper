@@ -547,17 +547,22 @@ Function Get-GPOSecurityOptions {
                     $values = @{}
                     $dispunits = $setting.Display.DisplayUnits
                     if ($dispunits) {
-                        $values.Add("DisplayUnits", $setting.Display.DisplayUnits)
+                        $values.Add("DisplayUnits", $dispunits)
                     }
 
                     $dispbool = $setting.Display.DisplayBoolean
                     if ($dispbool) {
-                        $values.Add("DisplayBoolean", $setting.Display.DisplayBoolean)
+                        $values.Add("DisplayBoolean", $dispbool)
                     }
 
                     $dispnum = $setting.Display.DisplayNumber
                     if ($dispnum) {
-                        $values.Add("DisplayNumber", $setting.Display.DisplayNumber)
+                        $values.Add("DisplayNumber", $dispnum)
+                    }
+
+                    $dispstring = $setting.Display.DisplayString
+                    if ($dispstring) {
+                        $values.Add("DisplayString",$dispstring)
                     }
 
                     $dispstrings = $setting.Display.DisplayStrings.Value
@@ -565,11 +570,11 @@ Function Get-GPOSecurityOptions {
                         $i = 0
                         foreach ($dispstring in $dispstrings) {
                            $values.Add("DisplayString$i", $dispstring)
-                           $i = ($i + 1)
+                           $i += 1
                         }
                     }
                     Write-NoEmpties -output $output
-                    Write-Output $values.GetEnumerator() | sort -Property Name
+                    Write-NoEmpties -output $values
                     "`r`n"
                 }
             }
@@ -764,7 +769,6 @@ Function Get-GPOAccountSettings {
     }
 
     # update the global counters
-
     if ($GPOisinteresting -eq 1) {
         $Global:interestingPolSettings += 1
     }
@@ -947,7 +951,7 @@ Function Get-GPORegSettings {
                 foreach ($thing in $setting.DropDownList) {
                     $output = @{}
                     $output.Add("Name", $thing.Name)
-                    $output.Add("Value", $thing.Value)
+                    $output.Add("Value", $thing.Value.Name)
                     $output.Add("State", $thing.State)
                     Write-NoEmpties -output $output
                     "`r`n"

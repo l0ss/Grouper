@@ -388,11 +388,17 @@ Function Get-GPOMSIInstallation {
                 $output.Add("Path", $MSIPath)
                 if ($Global:onlineChecks -eq 1) {
                     if ($MSIPath.StartsWith("\\")) {
-                        $MSIPathACL = Get-ACL $MSIPath
-                        $MSIPathOwner = $MSIPathACL.Owner
-                        $MSIPathAccess = $MSIPathACL.Access | Where-Object {-Not ($Global:boringTrustees -Contains $_.IdentityReference)} | select FileSystemRights,AccessControlType,IdentityReference
-                        $output.Add("Owner", $MSIPathOwner)
+                        try {
+                            $MSIPathACL = Get-ACL $MSIPath -ErrorAction Stop
+                            $MSIPathOwner = $MSIPathACL.Owner
+                            $MSIPathAccess = $MSIPathACL.Access | Where-Object {-Not ($Global:boringTrustees -Contains $_.IdentityReference)} | select FileSystemRights,AccessControlType,IdentityReference
+                            $output.Add("Owner", $MSIPathOwner)
+                        }
+                        catch [System.Exception] {
+                            Write-Output "Failed to read source file ACL. File could be missing or we might not have permissions to read it."
+                        }
                     }
+                    
                 }
                 Write-NoEmpties -output $output
                 if ($MSIPathAccess) {
@@ -400,7 +406,7 @@ Function Get-GPOMSIInstallation {
                     Try {[io.file]::OpenWrite($MSIPath).close()
                          Write-Title -Color Red -Text "Current user $env:username has write permissions on source file!" 
                     }
-                    Catch {
+                    Catch [System.Exception] {
                          Write-Output "Current user $env:username does not have write permissions on source file." 
                     }
                     "`r`n"
@@ -441,14 +447,21 @@ Function Get-GPOScripts {
                 
                 if ($Global:onlineChecks -eq 1) {
                     if ($commandPath.StartsWith("\\")) {
-                        $commandPathACL = Get-ACL $commandPath
-                        $commandPathOwner = $commandPathACL.Owner
-                        $commandPathAccess = $commandPathACL.Access | Where-Object {-Not ($Global:boringTrustees -Contains $_.IdentityReference)} | select FileSystemRights,AccessControlType,IdentityReference
-                        $output.Add("Owner", $commandPathOwner)
+                        try {
+                            $commandPathACL = Get-ACL $commandPath -ErrorAction Stop
+                            $commandPathOwner = $commandPathACL.Owner
+                            $commandPathAccess = $commandPathACL.Access | Where-Object {-Not ($Global:boringTrustees -Contains $_.IdentityReference)} | select FileSystemRights,AccessControlType,IdentityReference
+                            $output.Add("Owner", $commandPathOwner)
+                        }
+                        catch [System.Exception] {
+                            Write-Output "Failed to read source file ACL. File could be missing or we might not have permissions to read it."
+                        }
+
                     }
                 }
                 
                 Write-NoEmpties -output $output
+
                 if ($commandPathAccess) {
                     "`r`n"
                     Try {[io.file]::OpenWrite($commandPath).close()
@@ -493,19 +506,24 @@ Function Get-GPOFileUpdate {
                 $output.Add("targetPath", $setting.Properties.targetPath)
                 if ($Global:onlineChecks -eq 1) {
                     if ($fromPath.StartsWith("\\")) {
-                        $fromPathACL = Get-ACL $fromPath
-                        $fromPathOwner = $fromPathACL.Owner
-                        $fromPathAccess = $fromPathACL.Access | Where-Object {-Not ($Global:boringTrustees -Contains $_.IdentityReference)} | select FileSystemRights,AccessControlType,IdentityReference
-                        $output.Add("Owner", $fromPathOwner)
+                        try {
+                            $fromPathACL = Get-ACL $fromPath -ErrorAction Stop
+                            $fromPathOwner = $fromPathACL.Owner
+                            $fromPathAccess = $fromPathACL.Access | Where-Object {-Not ($Global:boringTrustees -Contains $_.IdentityReference)} | select FileSystemRights,AccessControlType,IdentityReference
+                            $output.Add("Owner", $fromPathOwner)
+                        }
+                        catch [System.Exception] {
+                            Write-Output "Failed to read source file ACL. File could be missing or we might not have permissions to read it."
+                        }
                     }
                 }
                 Write-NoEmpties -output $output
                 if ($fromPathAccess) {
                     "`r`n"
                     Try {[io.file]::OpenWrite($fromPath).close()
-                         Write-Title -Color Red -Text "Current user $env:username has write permissions on source file!" 
+                         Write-Title -Color Red -Text "Current user $env:username has write permissions on source file!"
                     }
-                    Catch {
+                    Catch [System.Exception] {
                          Write-Output "Current user $env:username does not have write permissions on source file." 
                     }
                     Write-Title -Text "Permissions on source file:" -DividerChar "-"
@@ -1100,10 +1118,15 @@ Function Get-GPOShortcuts {
                 $output.Add("shortcutPath", $setting.properties.shortcutPath)
                 if ($Global:onlineChecks -eq 1) {
                     if ($targetPath.StartsWith("\\")) {
-                        $targetPathACL = Get-ACL $targetPath
-                        $targetPathOwner = $targetPathACL.Owner
-                        $targetPathAccess = $targetPathACL.Access | Where-Object {-Not ($Global:boringTrustees -Contains $_.IdentityReference)} | select FileSystemRights,AccessControlType,IdentityReference
-                        $output.Add("Owner", $targetPathOwner)
+                        try {
+                            $targetPathACL = Get-ACL $targetPath -ErrorAction Stop
+                            $targetPathOwner = $targetPathACL.Owner
+                            $targetPathAccess = $targetPathACL.Access | Where-Object {-Not ($Global:boringTrustees -Contains $_.IdentityReference)} | select FileSystemRights,AccessControlType,IdentityReference
+                            $output.Add("Owner", $targetPathOwner)
+                        }
+                        catch {
+                            Write-Output "Failed to read source file ACL. File could be missing or we might not have permissions to read it."
+                        }
                     }
                 }
                 Write-NoEmpties -output $output
@@ -1255,33 +1278,33 @@ Function Invoke-AuditGPO {
 
     # Build an array of all our Get-GPO* check scriptblocks
     $polchecks = @()
-    $polchecks += {Get-GPORegKeys -Level $level -polXML $computerSettings}
-    $polchecks += {Get-GPORegKeys -Level $level -polXML $userSettings}
-    $polchecks += {Get-GPOUsers -Level $level -polXML $userSettings}
-    $polchecks += {Get-GPOUsers -Level $level -polXML $computerSettings}
-    $polchecks += {Get-GPOGroups -Level $level -polXML $userSettings}
-    $polchecks += {Get-GPOGroups -Level $level -polXML $computerSettings}
+    #$polchecks += {Get-GPORegKeys -Level $level -polXML $computerSettings}
+    #$polchecks += {Get-GPORegKeys -Level $level -polXML $userSettings}
+    #$polchecks += {Get-GPOUsers -Level $level -polXML $userSettings}
+    #$polchecks += {Get-GPOUsers -Level $level -polXML $computerSettings}
+    #$polchecks += {Get-GPOGroups -Level $level -polXML $userSettings}
+    #$polchecks += {Get-GPOGroups -Level $level -polXML $computerSettings}
     $polchecks += {Get-GPOScripts -Level $level -polXML $userSettings}
     $polchecks += {Get-GPOScripts -Level $level -polXML $computerSettings}
     $polchecks += {Get-GPOFileUpdate -Level $level -polXML $userSettings}
     $polchecks += {Get-GPOFileUpdate -Level $level -polXML $computerSettings}
     $polchecks += {Get-GPOMSIInstallation -Level $level -polXML $userSettings}
     $polchecks += {Get-GPOMSIInstallation -Level $level -polXML $computerSettings}
-    $polchecks += {Get-GPOUserRights -Level $level -polXML $xmlgpo}
-    $polchecks += {Get-GPOSchedTasks -Level $level -polXML $xmlgpo}
-    $polchecks += {Get-GPOFolderRedirection -Level $level -polXML $xmlgpo}
-    $polchecks += {Get-GPOFilePerms -Level $level -polXML $xmlgpo}
-    $polchecks += {Get-GPOSecurityOptions -Level $level -polXML $xmlgpo}
-    $polchecks += {Get-GPOAccountSettings -Level $level -polXML $xmlgpo}
-    $polchecks += {Get-GPONetworkShares -Level $level -polXml $xmlgpo}
-    $polchecks += {Get-GPOFolders -Level $level -polXML $userSettings}
-    $polchecks += {Get-GPOFolders -Level $level -polXML $computerSettings}
-    $polchecks += {Get-GPORegSettings -Level $level -polXML $computerSettings}
-    $polchecks += {Get-GPORegSettings -Level $level -polXML $userSettings}
-    $polchecks += {Get-GPOIniFiles -Level $level -polXML $computerSettings}
-    $polchecks += {Get-GPOIniFiles -Level $level -polXML $userSettings}
-    $polchecks += {Get-GPOEnvVars -Level $level -polXML $computerSettings}
-    $polchecks += {Get-GPOEnvVars -Level $level -polXML $userSettings}
+    #$polchecks += {Get-GPOUserRights -Level $level -polXML $xmlgpo}
+    #$polchecks += {Get-GPOSchedTasks -Level $level -polXML $xmlgpo}
+    #$polchecks += {Get-GPOFolderRedirection -Level $level -polXML $xmlgpo}
+    #$polchecks += {Get-GPOFilePerms -Level $level -polXML $xmlgpo}
+    #$polchecks += {Get-GPOSecurityOptions -Level $level -polXML $xmlgpo}
+    #$polchecks += {Get-GPOAccountSettings -Level $level -polXML $xmlgpo}
+    #$polchecks += {Get-GPONetworkShares -Level $level -polXml $xmlgpo}
+    #$polchecks += {Get-GPOFolders -Level $level -polXML $userSettings}
+    #$polchecks += {Get-GPOFolders -Level $level -polXML $computerSettings}
+    #$polchecks += {Get-GPORegSettings -Level $level -polXML $computerSettings}
+    #$polchecks += {Get-GPORegSettings -Level $level -polXML $userSettings}
+    #$polchecks += {Get-GPOIniFiles -Level $level -polXML $computerSettings}
+    #$polchecks += {Get-GPOIniFiles -Level $level -polXML $userSettings}
+    #$polchecks += {Get-GPOEnvVars -Level $level -polXML $computerSettings}
+    #$polchecks += {Get-GPOEnvVars -Level $level -polXML $userSettings}
     $polchecks += {Get-GPOShortcuts -Level $level -polXml $userSettings}
     $polchecks += {Get-GPOShortcuts -Level $level -polXml $computerSettings}
 
@@ -1500,4 +1523,3 @@ Function Invoke-AuditGPOReport {
     $stats += ('Total GPOs: {0}' -f $gpocount)
     Write-Output $stats
 }
-

@@ -76,7 +76,6 @@ $Global:boringTrustees = @()
 $Global:boringTrustees += "BUILTIN\Administrators"
 $Global:boringTrustees += "NT AUTHORITY\SYSTEM"
 
-
 #____________________ GPO Check functions _______________
 
 # There's a whole pile of these functions. Each one consumes a single <GPO> object from a Get-GPOReport XML report,
@@ -398,6 +397,13 @@ Function Get-GPOMSIInstallation {
                 Write-NoEmpties -output $output
                 if ($MSIPathAccess) {
                     "`r`n"
+                    Try {[io.file]::OpenWrite($MSIPath).close()
+                         Write-Title -Color Red -Text "Current user $env:username has write permissions on source file!" 
+                    }
+                    Catch {
+                         Write-Output "Current user $env:username does not have write permissions on source file." 
+                    }
+                    "`r`n"
                     Write-Title -Text "Permissions on source file:" -DividerChar "-"
                     Write-Output $MSIPathAccess
                 }
@@ -445,6 +451,12 @@ Function Get-GPOScripts {
                 Write-NoEmpties -output $output
                 if ($commandPathAccess) {
                     "`r`n"
+                    Try {[io.file]::OpenWrite($commandPath).close()
+                         Write-Title -Color Red -Text "Current user $env:username has write permissions on source file!" 
+                    }
+                    Catch {
+                         Write-Output "Current user $env:username does not have write permissions on source file." 
+                    }
                     Write-Title -Text "Permissions on source file:" -DividerChar "-"                    
                     Write-Output $commandPathAccess
                 }
@@ -489,6 +501,13 @@ Function Get-GPOFileUpdate {
                 }
                 Write-NoEmpties -output $output
                 if ($fromPathAccess) {
+                    "`r`n"
+                    Try {[io.file]::OpenWrite($fromPath).close()
+                         Write-Title -Color Red -Text "Current user $env:username has write permissions on source file!" 
+                    }
+                    Catch {
+                         Write-Output "Current user $env:username does not have write permissions on source file." 
+                    }
                     Write-Title -Text "Permissions on source file:" -DividerChar "-"
                     Write-Output $fromPathAccess
                 }
@@ -1090,6 +1109,13 @@ Function Get-GPOShortcuts {
                 Write-NoEmpties -output $output
                 if ($targetPathAccess) {
                     "`r`n"
+                    Try {[io.file]::OpenWrite($targetPath).close()
+                         Write-Title -Color Red -Text "Current user $env:username has write permissions on source file!" 
+                    }
+                    Catch {
+                         Write-Output "Current user $env:username does not have write permissions on source file." 
+                    }
+                    "`r`n"
                     Write-Title -Text "Permissions on source file:" -DividerChar "-"                    
                     Write-Output $targetPathAccess
                 }
@@ -1229,33 +1255,33 @@ Function Invoke-AuditGPO {
 
     # Build an array of all our Get-GPO* check scriptblocks
     $polchecks = @()
-    #$polchecks += {Get-GPORegKeys -Level $level -polXML $computerSettings}
-    #$polchecks += {Get-GPORegKeys -Level $level -polXML $userSettings}
-    #$polchecks += {Get-GPOUsers -Level $level -polXML $userSettings}
-    #$polchecks += {Get-GPOUsers -Level $level -polXML $computerSettings}
-    #$polchecks += {Get-GPOGroups -Level $level -polXML $userSettings}
-    #$polchecks += {Get-GPOGroups -Level $level -polXML $computerSettings}
+    $polchecks += {Get-GPORegKeys -Level $level -polXML $computerSettings}
+    $polchecks += {Get-GPORegKeys -Level $level -polXML $userSettings}
+    $polchecks += {Get-GPOUsers -Level $level -polXML $userSettings}
+    $polchecks += {Get-GPOUsers -Level $level -polXML $computerSettings}
+    $polchecks += {Get-GPOGroups -Level $level -polXML $userSettings}
+    $polchecks += {Get-GPOGroups -Level $level -polXML $computerSettings}
     $polchecks += {Get-GPOScripts -Level $level -polXML $userSettings}
     $polchecks += {Get-GPOScripts -Level $level -polXML $computerSettings}
     $polchecks += {Get-GPOFileUpdate -Level $level -polXML $userSettings}
     $polchecks += {Get-GPOFileUpdate -Level $level -polXML $computerSettings}
     $polchecks += {Get-GPOMSIInstallation -Level $level -polXML $userSettings}
     $polchecks += {Get-GPOMSIInstallation -Level $level -polXML $computerSettings}
-    #$polchecks += {Get-GPOUserRights -Level $level -polXML $xmlgpo}
-    #$polchecks += {Get-GPOSchedTasks -Level $level -polXML $xmlgpo}
-    #$polchecks += {Get-GPOFolderRedirection -Level $level -polXML $xmlgpo}
-    #$polchecks += {Get-GPOFilePerms -Level $level -polXML $xmlgpo}
-    #$polchecks += {Get-GPOSecurityOptions -Level $level -polXML $xmlgpo}
-    #$polchecks += {Get-GPOAccountSettings -Level $level -polXML $xmlgpo}
-    #$polchecks += {Get-GPONetworkShares -Level $level -polXml $xmlgpo}
-    #$polchecks += {Get-GPOFolders -Level $level -polXML $userSettings}
-    #$polchecks += {Get-GPOFolders -Level $level -polXML $computerSettings}
-    #$polchecks += {Get-GPORegSettings -Level $level -polXML $computerSettings}
-    #$polchecks += {Get-GPORegSettings -Level $level -polXML $userSettings}
-    #$polchecks += {Get-GPOIniFiles -Level $level -polXML $computerSettings}
-    #$polchecks += {Get-GPOIniFiles -Level $level -polXML $userSettings}
-    #$polchecks += {Get-GPOEnvVars -Level $level -polXML $computerSettings}
-    #$polchecks += {Get-GPOEnvVars -Level $level -polXML $userSettings}
+    $polchecks += {Get-GPOUserRights -Level $level -polXML $xmlgpo}
+    $polchecks += {Get-GPOSchedTasks -Level $level -polXML $xmlgpo}
+    $polchecks += {Get-GPOFolderRedirection -Level $level -polXML $xmlgpo}
+    $polchecks += {Get-GPOFilePerms -Level $level -polXML $xmlgpo}
+    $polchecks += {Get-GPOSecurityOptions -Level $level -polXML $xmlgpo}
+    $polchecks += {Get-GPOAccountSettings -Level $level -polXML $xmlgpo}
+    $polchecks += {Get-GPONetworkShares -Level $level -polXml $xmlgpo}
+    $polchecks += {Get-GPOFolders -Level $level -polXML $userSettings}
+    $polchecks += {Get-GPOFolders -Level $level -polXML $computerSettings}
+    $polchecks += {Get-GPORegSettings -Level $level -polXML $computerSettings}
+    $polchecks += {Get-GPORegSettings -Level $level -polXML $userSettings}
+    $polchecks += {Get-GPOIniFiles -Level $level -polXML $computerSettings}
+    $polchecks += {Get-GPOIniFiles -Level $level -polXML $userSettings}
+    $polchecks += {Get-GPOEnvVars -Level $level -polXML $computerSettings}
+    $polchecks += {Get-GPOEnvVars -Level $level -polXML $userSettings}
     $polchecks += {Get-GPOShortcuts -Level $level -polXml $userSettings}
     $polchecks += {Get-GPOShortcuts -Level $level -polXml $computerSettings}
 

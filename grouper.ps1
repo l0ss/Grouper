@@ -381,40 +381,43 @@ Function Get-GPOMSIInstallation {
 
     if ($MSIInstallation) {
  	    foreach ($setting in $MSIInstallation) {
-            if ($level -le 2) {
-                $output = @{}
-                $MSIPath = $setting.Path
-                $output.Add("Name", $setting.Name)
-                $output.Add("Path", $MSIPath)
-                if ($Global:onlineChecks -eq 1) {
-                    if ($MSIPath.StartsWith("\\")) {
-                        try {
-                            $MSIPathACL = Get-ACL $MSIPath -ErrorAction Stop
-                            $MSIPathOwner = $MSIPathACL.Owner
-                            $MSIPathAccess = $MSIPathACL.Access | Where-Object {-Not ($Global:boringTrustees -Contains $_.IdentityReference)} | select FileSystemRights,AccessControlType,IdentityReference
-                            $output.Add("Owner", $MSIPathOwner)
+            $output = @{}
+            $MSIPath = $setting.Path
+            $output.Add("Name", $setting.Name)
+            $output.Add("Path", $MSIPath)
+            
+            if ($Global:onlineChecks -eq 1) {
+                if ($MSIPath.StartsWith("\\")) {
+                    try {
+                        $MSIPathACL = Get-ACL $MSIPath -ErrorAction Stop
+                        $MSIPathOwner = $MSIPathACL.Owner
+                        $MSIPathAccess = $MSIPathACL.Access | Where-Object {-Not ($Global:boringTrustees -Contains $_.IdentityReference)} | select FileSystemRights,AccessControlType,IdentityReference
+                        $output.Add("Owner", $MSIPathOwner)
+                        Try {
+                            [io.file]::OpenWrite($MSIPath).close()
+                            Write-Output "Current user $env:username has write permissions on source file!"
+                            $settingisVulnerable = 1
                         }
-                        catch [System.Exception] {
-                            Write-Output "Failed to read source file ACL. File could be missing or we might not have permissions to read it."
+                        Catch {
+                              Write-Output "Current user $env:username does not have write permissions on source file." 
                         }
                     }
-                    
+                    catch [System.Exception] {
+                        Write-Output "Failed to read source file ACL. File could be missing or we might not have permissions to read it."
+                    }
+
                 }
+            }
+
+            if (($level -le 2) -Or (($level -le 3) -And ($settingisVulnerable -eq 1))) {
                 Write-NoEmpties -output $output
                 if ($MSIPathAccess) {
-                    "`r`n"
-                    Try {[io.file]::OpenWrite($MSIPath).close()
-                         Write-Title -Color Red -Text "Current user $env:username has write permissions on source file!" 
-                    }
-                    Catch [System.Exception] {
-                         Write-Output "Current user $env:username does not have write permissions on source file." 
-                    }
-                    "`r`n"
-                    Write-Title -Text "Permissions on source file:" -DividerChar "-"
+                    ""
+                    Write-Title -Text "Permissions on source file:" -DividerChar "-"                    
                     Write-Output $MSIPathAccess
                 }
-                "`r`n"
             }
+            "`r`n"
         }
     }
 }
@@ -438,43 +441,45 @@ Function Get-GPOScripts {
     if ($settingsScripts) {
 	    foreach ($setting in $settingsScripts) {
             $commandPath = $setting.Command
-            
-            if ($level -le 2) {
-                $output = @{}
-                $output.Add("Command", $commandPath)
-                $output.Add("Type", $setting.Type)
-                $output.Add("Parameters", $setting.Parameters)
-                
-                if ($Global:onlineChecks -eq 1) {
-                    if ($commandPath.StartsWith("\\")) {
-                        try {
-                            $commandPathACL = Get-ACL $commandPath -ErrorAction Stop
-                            $commandPathOwner = $commandPathACL.Owner
-                            $commandPathAccess = $commandPathACL.Access | Where-Object {-Not ($Global:boringTrustees -Contains $_.IdentityReference)} | select FileSystemRights,AccessControlType,IdentityReference
-                            $output.Add("Owner", $commandPathOwner)
-                        }
-                        catch [System.Exception] {
-                            Write-Output "Failed to read source file ACL. File could be missing or we might not have permissions to read it."
-                        }
+            $output = @{}
+            $output.Add("Command", $commandPath)
+            $output.Add("Type", $setting.Type)
+            $output.Add("Parameters", $setting.Parameters)
+            $settingIsVulnerable = 0
 
+            if ($Global:onlineChecks -eq 1) {
+                if ($commandPath.StartsWith("\\")) {
+                    try {
+                        $commandPathACL = Get-ACL $commandPath -ErrorAction Stop
+                        $commandPathOwner = $commandPathACL.Owner
+                        $commandPathAccess = $commandPathACL.Access | Where-Object {-Not ($Global:boringTrustees -Contains $_.IdentityReference)} | select FileSystemRights,AccessControlType,IdentityReference
+                        $output.Add("Owner", $commandPathOwner)
+                        Try {
+                            [io.file]::OpenWrite($commandPath).close()
+                            Write-Output "Current user $env:username has write permissions on source file!"
+                            $settingisVulnerable = 1
+                        }
+                        Catch {
+                              Write-Output "Current user $env:username does not have write permissions on source file." 
+                        }
                     }
+                    catch [System.Exception] {
+                        Write-Output "Failed to read source file ACL. File could be missing or we might not have permissions to read it."
+                    }
+
                 }
-                
+            }
+            
+            if (($level -le 2) -Or (($level -le 3) -And ($settingisVulnerable -eq 1))) {
                 Write-NoEmpties -output $output
-
                 if ($commandPathAccess) {
-                    "`r`n"
-                    Try {[io.file]::OpenWrite($commandPath).close()
-                         Write-Title -Color Red -Text "Current user $env:username has write permissions on source file!" 
-                    }
-                    Catch {
-                         Write-Output "Current user $env:username does not have write permissions on source file." 
-                    }
+                    ""
                     Write-Title -Text "Permissions on source file:" -DividerChar "-"                    
                     Write-Output $commandPathAccess
                 }
-                "`r`n"
             }
+            "`r`n"
+            
         }
     }
 }
@@ -498,39 +503,45 @@ Function Get-GPOFileUpdate {
     if ($settingsFiles) {
  	    foreach ($setting in $settingsFiles.File) {
             $fromPath = $setting.Properties.fromPath
-            if ((($level -le 2) -And ($fromPath.StartsWith("\\"))) -Or ($level -eq 1)) {
-                $output = @{}
-                $output.Add("Name", $setting.name)
-                $output.Add("Action", $setting.Properties.action)
-                $output.Add("fromPath", $fromPath)
-                $output.Add("targetPath", $setting.Properties.targetPath)
-                if ($Global:onlineChecks -eq 1) {
-                    if ($fromPath.StartsWith("\\")) {
-                        try {
-                            $fromPathACL = Get-ACL $fromPath -ErrorAction Stop
-                            $fromPathOwner = $fromPathACL.Owner
-                            $fromPathAccess = $fromPathACL.Access | Where-Object {-Not ($Global:boringTrustees -Contains $_.IdentityReference)} | select FileSystemRights,AccessControlType,IdentityReference
-                            $output.Add("Owner", $fromPathOwner)
+            $targetPath = $setting.Properties.targetPath
+            $output = @{}
+            $output.Add("Name", $setting.name)
+            $output.Add("Action", $setting.Properties.action)
+            $output.Add("fromPath", $fromPath)
+            $output.Add("targetPath", $targetPath)
+            $settingIsVulnerable = 0
+
+            if ($Global:onlineChecks -eq 1) {
+                if ($fromPath.StartsWith("\\")) {
+                    try {
+                        $fromPathACL = Get-ACL $fromPath -ErrorAction Stop
+                        $fromPathOwner = $fromPathACL.Owner
+                        $fromPathAccess = $fromPathACL.Access | Where-Object {-Not ($Global:boringTrustees -Contains $_.IdentityReference)} | select FileSystemRights,AccessControlType,IdentityReference
+                        $output.Add("Owner", $fromPathOwner)
+                        Try {
+                            [io.file]::OpenWrite($fromPath).close()
+                            Write-Output "Current user $env:username has write permissions on source file!"
+                            $settingisVulnerable = 1
                         }
-                        catch [System.Exception] {
-                            Write-Output "Failed to read source file ACL. File could be missing or we might not have permissions to read it."
+                        Catch {
+                              Write-Output "Current user $env:username does not have write permissions on source file." 
                         }
                     }
+                    catch [System.Exception] {
+                        Write-Output "Failed to read source file ACL. File could be missing or we might not have permissions to read it."
+                    }
                 }
+            }
+
+            if (($level -le 2) -Or (($level -le 3) -And ($settingisVulnerable -eq 1))) {
                 Write-NoEmpties -output $output
                 if ($fromPathAccess) {
-                    "`r`n"
-                    Try {[io.file]::OpenWrite($fromPath).close()
-                         Write-Title -Color Red -Text "Current user $env:username has write permissions on source file!"
-                    }
-                    Catch [System.Exception] {
-                         Write-Output "Current user $env:username does not have write permissions on source file." 
-                    }
-                    Write-Title -Text "Permissions on source file:" -DividerChar "-"
+                    ""
+                    Write-Title -Text "Permissions on source file:" -DividerChar "-"                    
                     Write-Output $fromPathAccess
                 }
-                "`r`n"
             }
+            "`r`n"            
         }
     }
 }
@@ -1104,46 +1115,48 @@ Function Get-GPOShortcuts {
         # Iterate over array of settings, writing out only those we care about.
         foreach ($setting in $settingsShortcuts) {
             $targetPath = $setting.properties.targetPath
-            if (($level -eq 1) -Or (($level -le 2) -And ($targetPath.StartsWith("\\")))) {
-                $output = @{}
-                $output.Add("Name", $setting.name)
-                $output.Add("Status", $setting.status)
-                $output.Add("targetType", $setting.properties.targetType)
-                $output.Add("Action", $setting.properties.Action)
-                $output.Add("comment", $setting.properties.comment)
-                $output.Add("startIn", $setting.properties.startIn)
-                $output.Add("arguments", $setting.properties.arguments)
-                $output.Add("targetPath", $setting.properties.targetPath)
-                $output.Add("iconPath", $setting.properties.iconPath)
-                $output.Add("shortcutPath", $setting.properties.shortcutPath)
-                if ($Global:onlineChecks -eq 1) {
-                    if ($targetPath.StartsWith("\\")) {
-                        try {
-                            $targetPathACL = Get-ACL $targetPath -ErrorAction Stop
-                            $targetPathOwner = $targetPathACL.Owner
-                            $targetPathAccess = $targetPathACL.Access | Where-Object {-Not ($Global:boringTrustees -Contains $_.IdentityReference)} | select FileSystemRights,AccessControlType,IdentityReference
-                            $output.Add("Owner", $targetPathOwner)
+            $output = @{}
+            $output.Add("Name", $setting.name)
+            $output.Add("Status", $setting.status)
+            $output.Add("targetType", $setting.properties.targetType)
+            $output.Add("Action", $setting.properties.Action)
+            $output.Add("comment", $setting.properties.comment)
+            $output.Add("startIn", $setting.properties.startIn)
+            $output.Add("arguments", $setting.properties.arguments)
+            $output.Add("targetPath", $setting.properties.targetPath)
+            $output.Add("iconPath", $setting.properties.iconPath)
+            $output.Add("shortcutPath", $setting.properties.shortcutPath)
+            if ($Global:onlineChecks -eq 1) {
+                if ($targetPath.StartsWith("\\")) {
+                    try {
+                        $targetPathACL = Get-ACL $targetPath -ErrorAction Stop
+                        $targetPathOwner = $targetPathACL.Owner
+                        $targetPathAccess = $targetPathACL.Access | Where-Object {-Not ($Global:boringTrustees -Contains $_.IdentityReference)} | select FileSystemRights,AccessControlType,IdentityReference
+                        $output.Add("Owner", $targetPathOwner)
+                        Try {
+                            [io.file]::OpenWrite($targetPath).close()
+                            Write-Output "Current user $env:username has write permissions on source file!"
+                            $settingisVulnerable = 1
                         }
-                        catch {
-                            Write-Output "Failed to read source file ACL. File could be missing or we might not have permissions to read it."
+                        Catch {
+                              Write-Output "Current user $env:username does not have write permissions on source file." 
                         }
+                    }
+                    catch [System.Exception] {
+                        Write-Output "Failed to read source file ACL. File could be missing or we might not have permissions to read it."
                     }
                 }
+            }
+
+            if (($level -le 2) -Or (($level -le 3) -And ($settingisVulnerable -eq 1))) {
                 Write-NoEmpties -output $output
                 if ($targetPathAccess) {
-                    "`r`n"
-                    Try {[io.file]::OpenWrite($targetPath).close()
-                         Write-Title -Color Red -Text "Current user $env:username has write permissions on source file!" 
-                    }
-                    Catch {
-                         Write-Output "Current user $env:username does not have write permissions on source file." 
-                    }
-                    "`r`n"
+                    ""
                     Write-Title -Text "Permissions on source file:" -DividerChar "-"                    
                     Write-Output $targetPathAccess
                 }
-                "`r`n"
             }
+            "`r`n"
         }
     }
 }
@@ -1523,3 +1536,4 @@ Function Invoke-AuditGPOReport {
     $stats += ('Total GPOs: {0}' -f $gpocount)
     Write-Output $stats
 }
+

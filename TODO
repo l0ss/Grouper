@@ -2,3 +2,4 @@ Get-GPORegSettings - implement filtering - very noisy
 Get-GPORegSettings - fix output of .value
 Get-GPOFilePerms - parse SDDL
 Get-GPOAccountSettings - implement filtering
+Get-GPOFolderRedirection - get permissions on target path

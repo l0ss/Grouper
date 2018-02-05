@@ -1475,4 +1475,3 @@ Function Invoke-AuditGPOReport {
     Write-Output $stats
 }
 
-Invoke-AuditGPOReport -path C:\temp\gporeport.xml -Level 1 -online

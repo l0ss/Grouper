@@ -72,6 +72,10 @@ $Global:intRights += "SeCreateGlobalPrivilege"
 $Global:intRights += "SeLoadDriverPrivilege"
 $Global:intRights += "SeRemoteInteractiveLogonRight"
 
+$Global:boringTrustees = @()
+$Global:boringTrustees += "BUILTIN\Administrators"
+$Global:boringTrustees += "NT AUTHORITY\SYSTEM"
+
 #____________________ GPO Check functions _______________
 
 # There's a whole pile of these functions. Each one consumes a single <GPO> object from a Get-GPOReport XML report,
@@ -369,19 +373,46 @@ Function Get-GPOMSIInstallation {
     ######
     # Description: Checks for MSI installers being used to install software.
     # Vulnerable: TODO Only show instances where the file is writable by the current user or 'Everyone' or 'Domain Users' or 'Authenticated Users'.
-    # Interesting: TODO Also show instances where any user/group other than the usual default Domain/Enterprise Admins has 'Full Control'.
+    # Interesting: All MSI installations.
     # Boring: All MSI installations.
     ######
 
-	$computerMSIInstallation = ($polXml.Computer.ExtensionData.Extension.MsiApplication | Sort-Object GPOSettingOrder)
+	$MSIInstallation = ($polXml.ExtensionData.Extension.MsiApplication | Sort-Object GPOSettingOrder)
 
-    if ($computerMSIInstallation) {
- 	    foreach ($setting in $computerMSIInstallation) {
-            if ($level -eq 1) {
+    if ($MSIInstallation) {
+ 	    foreach ($setting in $MSIInstallation) {
+            if ($level -le 2) {
                 $output = @{}
+                $MSIPath = $setting.Path
                 $output.Add("Name", $setting.Name)
-                $output.Add("Path", $setting.Path)
+                $output.Add("Path", $MSIPath)
+                if ($Global:onlineChecks -eq 1) {
+                    if ($MSIPath.StartsWith("\\")) {
+                        try {
+                            $MSIPathACL = Get-ACL $MSIPath -ErrorAction Stop
+                            $MSIPathOwner = $MSIPathACL.Owner
+                            $MSIPathAccess = $MSIPathACL.Access | Where-Object {-Not ($Global:boringTrustees -Contains $_.IdentityReference)} | select FileSystemRights,AccessControlType,IdentityReference
+                            $output.Add("Owner", $MSIPathOwner)
+                        }
+                        catch [System.Exception] {
+                            Write-Output "Failed to read source file ACL. File could be missing or we might not have permissions to read it."
+                        }
+                    }
+
+                }
                 Write-NoEmpties -output $output
+                if ($MSIPathAccess) {
+                    "`r`n"
+                    Try {[io.file]::OpenWrite($MSIPath).close()
+                         Write-Title -Color Red -Text "Current user $env:username has write permissions on source file!"
+                    }
+                    Catch [System.Exception] {
+                         Write-Output "Current user $env:username does not have write permissions on source file."
+                    }
+                    "`r`n"
+                    Write-Title -Text "Permissions on source file:" -DividerChar "-"
+                    Write-Output $MSIPathAccess
+                }
                 "`r`n"
             }
         }
@@ -398,7 +429,7 @@ Function Get-GPOScripts {
     ######
     # Description: Checks for startup/shutdown/logon/logoff scripts.
     # Vulnerable: TODO Only show instances where the file is writable by the current user or 'Everyone' or 'Domain Users' or 'Authenticated Users'.
-    # Interesting: TODO Also show instances where any user/group other than the usual default Domain/Enterprise Admins has 'Full Control' or where 'Parameters' is set.
+    # Interesting: All scripts.
     # Boring: All scripts.
     ######
 
@@ -406,12 +437,42 @@ Function Get-GPOScripts {
 
     if ($settingsScripts) {
 	    foreach ($setting in $settingsScripts) {
-            if ($level -eq 1) {
+            $commandPath = $setting.Command
+
+            if ($level -le 2) {
                 $output = @{}
-                $output.Add("Command", $setting.Command)
+                $output.Add("Command", $commandPath)
                 $output.Add("Type", $setting.Type)
                 $output.Add("Parameters", $setting.Parameters)
+
+                if ($Global:onlineChecks -eq 1) {
+                    if ($commandPath.StartsWith("\\")) {
+                        try {
+                            $commandPathACL = Get-ACL $commandPath -ErrorAction Stop
+                            $commandPathOwner = $commandPathACL.Owner
+                            $commandPathAccess = $commandPathACL.Access | Where-Object {-Not ($Global:boringTrustees -Contains $_.IdentityReference)} | select FileSystemRights,AccessControlType,IdentityReference
+                            $output.Add("Owner", $commandPathOwner)
+                        }
+                        catch [System.Exception] {
+                            Write-Output "Failed to read source file ACL. File could be missing or we might not have permissions to read it."
+                        }
+
+                    }
+                }
+
                 Write-NoEmpties -output $output
+
+                if ($commandPathAccess) {
+                    "`r`n"
+                    Try {[io.file]::OpenWrite($commandPath).close()
+                         Write-Title -Color Red -Text "Current user $env:username has write permissions on source file!"
+                    }
+                    Catch {
+                         Write-Output "Current user $env:username does not have write permissions on source file."
+                    }
+                    Write-Title -Text "Permissions on source file:" -DividerChar "-"
+                    Write-Output $commandPathAccess
+                }
                 "`r`n"
             }
         }
@@ -426,9 +487,9 @@ Function Get-GPOFileUpdate {
     )
 
     ######
-    # Description: Checks for MSI installers being used to install software.
+    # Description: Checks for files being copied/updated/whatever.
     # Vulnerable: TODO Only show instances where the 'fromPath' file is writable by the current user or 'Everyone' or 'Domain Users' or 'Authenticated Users'.
-    # Interesting: TODO Also show instances where any user/group other than the usual default Domain/Enterprise Admins has 'Full Control' of the 'fromPath' file.
+    # Interesting: All File Updates where FromPath is a network share
     # Boring: All File Updates.
     ######
 
@@ -436,13 +497,38 @@ Function Get-GPOFileUpdate {
 
     if ($settingsFiles) {
  	    foreach ($setting in $settingsFiles.File) {
-            if ($level -eq 1) {
+            $fromPath = $setting.Properties.fromPath
+            if ((($level -le 2) -And ($fromPath.StartsWith("\\"))) -Or ($level -eq 1)) {
                 $output = @{}
                 $output.Add("Name", $setting.name)
                 $output.Add("Action", $setting.Properties.action)
-                $output.Add("fromPath", $setting.Properties.fromPath)
+                $output.Add("fromPath", $fromPath)
                 $output.Add("targetPath", $setting.Properties.targetPath)
+                if ($Global:onlineChecks -eq 1) {
+                    if ($fromPath.StartsWith("\\")) {
+                        try {
+                            $fromPathACL = Get-ACL $fromPath -ErrorAction Stop
+                            $fromPathOwner = $fromPathACL.Owner
+                            $fromPathAccess = $fromPathACL.Access | Where-Object {-Not ($Global:boringTrustees -Contains $_.IdentityReference)} | select FileSystemRights,AccessControlType,IdentityReference
+                            $output.Add("Owner", $fromPathOwner)
+                        }
+                        catch [System.Exception] {
+                            Write-Output "Failed to read source file ACL. File could be missing or we might not have permissions to read it."
+                        }
+                    }
+                }
                 Write-NoEmpties -output $output
+                if ($fromPathAccess) {
+                    "`r`n"
+                    Try {[io.file]::OpenWrite($fromPath).close()
+                         Write-Title -Color Red -Text "Current user $env:username has write permissions on source file!"
+                    }
+                    Catch [System.Exception] {
+                         Write-Output "Current user $env:username does not have write permissions on source file."
+                    }
+                    Write-Title -Text "Permissions on source file:" -DividerChar "-"
+                    Write-Output $fromPathAccess
+                }
                 "`r`n"
             }
         }
@@ -1017,7 +1103,8 @@ Function Get-GPOShortcuts {
     if ($settingsShortcuts) {
         # Iterate over array of settings, writing out only those we care about.
         foreach ($setting in $settingsShortcuts) {
-            if ($level -eq 1) {
+            $targetPath = $setting.properties.targetPath
+            if (($level -eq 1) -Or (($level -le 2) -And ($targetPath.StartsWith("\\")))) {
                 $output = @{}
                 $output.Add("Name", $setting.name)
                 $output.Add("Status", $setting.status)
@@ -1029,7 +1116,32 @@ Function Get-GPOShortcuts {
                 $output.Add("targetPath", $setting.properties.targetPath)
                 $output.Add("iconPath", $setting.properties.iconPath)
                 $output.Add("shortcutPath", $setting.properties.shortcutPath)
+                if ($Global:onlineChecks -eq 1) {
+                    if ($targetPath.StartsWith("\\")) {
+                        try {
+                            $targetPathACL = Get-ACL $targetPath -ErrorAction Stop
+                            $targetPathOwner = $targetPathACL.Owner
+                            $targetPathAccess = $targetPathACL.Access | Where-Object {-Not ($Global:boringTrustees -Contains $_.IdentityReference)} | select FileSystemRights,AccessControlType,IdentityReference
+                            $output.Add("Owner", $targetPathOwner)
+                        }
+                        catch {
+                            Write-Output "Failed to read source file ACL. File could be missing or we might not have permissions to read it."
+                        }
+                    }
+                }
                 Write-NoEmpties -output $output
+                if ($targetPathAccess) {
+                    "`r`n"
+                    Try {[io.file]::OpenWrite($targetPath).close()
+                         Write-Title -Color Red -Text "Current user $env:username has write permissions on source file!"
+                    }
+                    Catch {
+                         Write-Output "Current user $env:username does not have write permissions on source file."
+                    }
+                    "`r`n"
+                    Write-Title -Text "Permissions on source file:" -DividerChar "-"
+                    Write-Output $targetPathAccess
+                }
                 "`r`n"
             }
         }
@@ -1165,32 +1277,33 @@ Function Invoke-AuditGPO {
 
     # Build an array of all our Get-GPO* check scriptblocks
     $polchecks = @()
-    $polchecks += {Get-GPORegKeys -Level $level -polXML $computerSettings}
-    $polchecks += {Get-GPORegKeys -Level $level -polXML $userSettings}
-    $polchecks += {Get-GPOUsers -Level $level -polXML $userSettings}
-    $polchecks += {Get-GPOUsers -Level $level -polXML $computerSettings}
-    $polchecks += {Get-GPOGroups -Level $level -polXML $userSettings}
-    $polchecks += {Get-GPOGroups -Level $level -polXML $computerSettings}
+    #$polchecks += {Get-GPORegKeys -Level $level -polXML $computerSettings}
+    #$polchecks += {Get-GPORegKeys -Level $level -polXML $userSettings}
+    #$polchecks += {Get-GPOUsers -Level $level -polXML $userSettings}
+    #$polchecks += {Get-GPOUsers -Level $level -polXML $computerSettings}
+    #$polchecks += {Get-GPOGroups -Level $level -polXML $userSettings}
+    #$polchecks += {Get-GPOGroups -Level $level -polXML $computerSettings}
     $polchecks += {Get-GPOScripts -Level $level -polXML $userSettings}
     $polchecks += {Get-GPOScripts -Level $level -polXML $computerSettings}
     $polchecks += {Get-GPOFileUpdate -Level $level -polXML $userSettings}
     $polchecks += {Get-GPOFileUpdate -Level $level -polXML $computerSettings}
-    $polchecks += {Get-GPOMSIInstallation -Level $level -polXML $xmlgpo}
-    $polchecks += {Get-GPOUserRights -Level $level -polXML $xmlgpo}
-    $polchecks += {Get-GPOSchedTasks -Level $level -polXML $xmlgpo}
-    $polchecks += {Get-GPOFolderRedirection -Level $level -polXML $xmlgpo}
-    $polchecks += {Get-GPOFilePerms -Level $level -polXML $xmlgpo}
-    $polchecks += {Get-GPOSecurityOptions -Level $level -polXML $xmlgpo}
-    $polchecks += {Get-GPOAccountSettings -Level $level -polXML $xmlgpo}
-    $polchecks += {Get-GPONetworkShares -Level $level -polXml $xmlgpo}
-    $polchecks += {Get-GPOFolders -Level $level -polXML $userSettings}
-    $polchecks += {Get-GPOFolders -Level $level -polXML $computerSettings}
-    $polchecks += {Get-GPORegSettings -Level $level -polXML $computerSettings}
-    $polchecks += {Get-GPORegSettings -Level $level -polXML $userSettings}
-    $polchecks += {Get-GPOIniFiles -Level $level -polXML $computerSettings}
-    $polchecks += {Get-GPOIniFiles -Level $level -polXML $userSettings}
-    $polchecks += {Get-GPOEnvVars -Level $level -polXML $computerSettings}
-    $polchecks += {Get-GPOEnvVars -Level $level -polXML $userSettings}
+    $polchecks += {Get-GPOMSIInstallation -Level $level -polXML $userSettings}
+    $polchecks += {Get-GPOMSIInstallation -Level $level -polXML $computerSettings}
+    #$polchecks += {Get-GPOUserRights -Level $level -polXML $xmlgpo}
+    #$polchecks += {Get-GPOSchedTasks -Level $level -polXML $xmlgpo}
+    #$polchecks += {Get-GPOFolderRedirection -Level $level -polXML $xmlgpo}
+    #$polchecks += {Get-GPOFilePerms -Level $level -polXML $xmlgpo}
+    #$polchecks += {Get-GPOSecurityOptions -Level $level -polXML $xmlgpo}
+    #$polchecks += {Get-GPOAccountSettings -Level $level -polXML $xmlgpo}
+    #$polchecks += {Get-GPONetworkShares -Level $level -polXml $xmlgpo}
+    #$polchecks += {Get-GPOFolders -Level $level -polXML $userSettings}
+    #$polchecks += {Get-GPOFolders -Level $level -polXML $computerSettings}
+    #$polchecks += {Get-GPORegSettings -Level $level -polXML $computerSettings}
+    #$polchecks += {Get-GPORegSettings -Level $level -polXML $userSettings}
+    #$polchecks += {Get-GPOIniFiles -Level $level -polXML $computerSettings}
+    #$polchecks += {Get-GPOIniFiles -Level $level -polXML $userSettings}
+    #$polchecks += {Get-GPOEnvVars -Level $level -polXML $computerSettings}
+    #$polchecks += {Get-GPOEnvVars -Level $level -polXML $userSettings}
     $polchecks += {Get-GPOShortcuts -Level $level -polXml $userSettings}
     $polchecks += {Get-GPOShortcuts -Level $level -polXml $computerSettings}
 
@@ -1331,7 +1444,9 @@ Function Invoke-AuditGPOReport {
           ParameterSetName='WithoutFile', Mandatory=$false
         )]
         [ValidateSet(1,2,3)]
-        [int]$level = 2
+        [int]$level = 2,
+
+        [switch]$online
     )
 
     Write-Banner
@@ -1350,6 +1465,20 @@ Function Invoke-AuditGPOReport {
     $Global:showDisabled = 0
     if ($showDisabled) {
         $Global:showDisabled = 1
+    }
+
+    # quick and dirty check to make sure that if the user said to do 'online' checks that we can actually reach the domain.
+    $Global:onlineChecks = 0
+    if ($online) {
+        try {
+            net accounts /domain 1> $null
+            $Global:onlineChecks = 1
+        }
+        catch {
+            Write-Output "Couldn't talk to the domain, falling back to offline mode."
+            $Global:onlineChecks =0
+        }
+
     }
 
     if ($lazyMode) {

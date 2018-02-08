@@ -388,24 +388,12 @@ Function Get-GPOMSIInstallation {
             
             if ($Global:onlineChecks -eq 1) {
                 if ($MSIPath.StartsWith("\\")) {
-                    try {
-                        $MSIPathACL = Get-ACL $MSIPath -ErrorAction Stop
-                        $MSIPathOwner = $MSIPathACL.Owner
-                        $MSIPathAccess = $MSIPathACL.Access | Where-Object {-Not ($Global:boringTrustees -Contains $_.IdentityReference)} | select FileSystemRights,AccessControlType,IdentityReference
-                        $output.Add("Owner", $MSIPathOwner)
-                        Try {
-                            [io.file]::OpenWrite($MSIPath).close()
-                            Write-Output "Current user $env:username has write permissions on source file!"
-                            $settingisVulnerable = 1
-                        }
-                        Catch {
-                              Write-Output "Current user $env:username does not have write permissions on source file." 
-                        }
+                    $ACLData = Find-IntACL -Path $MSIPath
+                    $output.Add("Owner",$ACLData["Owner"])
+                    if ($ACLData["Vulnerable"] -eq "True") {
+                        $settingisvulnerable = 1
                     }
-                    catch [System.Exception] {
-                        Write-Output "Failed to read source file ACL. File could be missing or we might not have permissions to read it."
-                    }
-
+                    $MSIPathAccess = $ACLData["Trustees"]
                 }
             }
 
@@ -449,24 +437,12 @@ Function Get-GPOScripts {
 
             if ($Global:onlineChecks -eq 1) {
                 if ($commandPath.StartsWith("\\")) {
-                    try {
-                        $commandPathACL = Get-ACL $commandPath -ErrorAction Stop
-                        $commandPathOwner = $commandPathACL.Owner
-                        $commandPathAccess = $commandPathACL.Access | Where-Object {-Not ($Global:boringTrustees -Contains $_.IdentityReference)} | select FileSystemRights,AccessControlType,IdentityReference
-                        $output.Add("Owner", $commandPathOwner)
-                        Try {
-                            [io.file]::OpenWrite($commandPath).close()
-                            Write-Output "Current user $env:username has write permissions on source file!"
-                            $settingisVulnerable = 1
-                        }
-                        Catch {
-                              Write-Output "Current user $env:username does not have write permissions on source file." 
-                        }
+                    $ACLData = Find-IntACL -Path $commandPath
+                    $output.Add("Owner",$ACLData["Owner"])
+                    if ($ACLData["Vulnerable"] -eq "True") {
+                        $settingisvulnerable = 1
                     }
-                    catch [System.Exception] {
-                        Write-Output "Failed to read source file ACL. File could be missing or we might not have permissions to read it."
-                    }
-
+                    $commandPathAccess = $ACLData["Trustees"]
                 }
             }
             
@@ -513,23 +489,12 @@ Function Get-GPOFileUpdate {
 
             if ($Global:onlineChecks -eq 1) {
                 if ($fromPath.StartsWith("\\")) {
-                    try {
-                        $fromPathACL = Get-ACL $fromPath -ErrorAction Stop
-                        $fromPathOwner = $fromPathACL.Owner
-                        $fromPathAccess = $fromPathACL.Access | Where-Object {-Not ($Global:boringTrustees -Contains $_.IdentityReference)} | select FileSystemRights,AccessControlType,IdentityReference
-                        $output.Add("Owner", $fromPathOwner)
-                        Try {
-                            [io.file]::OpenWrite($fromPath).close()
-                            Write-Output "Current user $env:username has write permissions on source file!"
-                            $settingisVulnerable = 1
-                        }
-                        Catch {
-                              Write-Output "Current user $env:username does not have write permissions on source file." 
-                        }
+                    $ACLData = Find-IntACL -Path $fromPath
+                    $output.Add("Owner",$ACLData["Owner"])
+                    if ($ACLData["Vulnerable"] -eq "True") {
+                        $settingisvulnerable = 1
                     }
-                    catch [System.Exception] {
-                        Write-Output "Failed to read source file ACL. File could be missing or we might not have permissions to read it."
-                    }
+                    $fromPathAccess = $ACLData["Trustees"]
                 }
             }
 
@@ -1128,23 +1093,12 @@ Function Get-GPOShortcuts {
             $output.Add("shortcutPath", $setting.properties.shortcutPath)
             if ($Global:onlineChecks -eq 1) {
                 if ($targetPath.StartsWith("\\")) {
-                    try {
-                        $targetPathACL = Get-ACL $targetPath -ErrorAction Stop
-                        $targetPathOwner = $targetPathACL.Owner
-                        $targetPathAccess = $targetPathACL.Access | Where-Object {-Not ($Global:boringTrustees -Contains $_.IdentityReference)} | select FileSystemRights,AccessControlType,IdentityReference
-                        $output.Add("Owner", $targetPathOwner)
-                        Try {
-                            [io.file]::OpenWrite($targetPath).close()
-                            Write-Output "Current user $env:username has write permissions on source file!"
-                            $settingisVulnerable = 1
-                        }
-                        Catch {
-                              Write-Output "Current user $env:username does not have write permissions on source file." 
-                        }
+                    $ACLData = Find-IntACL -Path $targetPath
+                    $output.Add("Owner",$ACLData["Owner"])
+                    if ($ACLData["Vulnerable"] -eq "True") {
+                        $settingisvulnerable = 1
                     }
-                    catch [System.Exception] {
-                        Write-Output "Failed to read source file ACL. File could be missing or we might not have permissions to read it."
-                    }
+                    $targetPathAccess = $ACLData["Trustees"]
                 }
             }
 
@@ -1259,6 +1213,30 @@ Function Write-Banner {
     }
 }
 
+Function Find-IntACL {
+    Param (
+        [Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()][string]$Path
+    )
+    $ACLData = @{}
+    try {
+        $targetPathACL = Get-ACL $Path -ErrorAction Stop
+        $targetPathOwner = $targetPathACL.Owner
+        $targetPathAccess = $targetPathACL.Access | Where-Object {-Not ($Global:boringTrustees -Contains $_.IdentityReference)} | select FileSystemRights,AccessControlType,IdentityReference
+        $ACLData.Add("Owner", $targetPathOwner)
+        $ACLData.Add("Trustees", $targetPathAccess)
+        Try {
+            [io.file]::OpenWrite($targetPath).close()
+            $ACLData.Add("Vulnerable","True")
+        }
+        Catch {
+            $ACLData.Add("Vulnerable","False")
+        }
+    }
+    catch [System.Exception] {
+        $ACLData.Add("Vulnerable","Error")
+    }
+    return $ACLData
+}
 
 #_____________________________________________________________________
 Function Invoke-AuditGPO {
@@ -1537,3 +1515,4 @@ Function Invoke-AuditGPOReport {
     Write-Output $stats
 }
 
+#Invoke-AuditGPOReport -Path C:\temp\gporeport.xml -Level 2 -online

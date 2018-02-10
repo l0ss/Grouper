@@ -1447,6 +1447,11 @@ Function Invoke-AuditGPOReport {
 
     Write-Banner
 
+    if ($PSVersionTable.PSVersion.Major -le 2) {
+        Write-ColorText -Color "Red" -Text "Sorry, Grouper is not yet compatible with PowerShell 2.0."
+        break
+    }
+
     if ($PSCmdlet.ParameterSetName -eq 'WithFile') {
         $lazyMode = $false
     }

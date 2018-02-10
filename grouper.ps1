@@ -1211,8 +1211,9 @@ Function Write-Banner {
     $Pattern = ('White','Yellow','Red','Red','DarkRed','DarkRed','White','White')
     ""
     ""
+    $i = 0
     foreach ($barfline in $barf) {
-        Write-ColorText -Text $barfline -Color $Pattern[$barf.IndexOf($barfline)]
+        Write-ColorText -Text $barfline -Color $Pattern[$i]
         $i += 1
     }
 }

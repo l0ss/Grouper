@@ -238,9 +238,9 @@ Function Get-GPOUserRights {
     $GPOIsVulnerable = 0
 
     $uraSettings = ($polXml.Computer.ExtensionData.Extension.UserRightsAssignment)
-
+    
     $uraSettings = ($uraSettings | ? {$_}) #Strips null elements from array - nfi why I was getting so many of these.
-
+    
     if ($uraSettings) {
         foreach ($setting in $uraSettings) {
             $settingIsInteresting = 0
@@ -400,13 +400,13 @@ Function Get-GPOMSIInstallation {
 
             if (($level -le 2) -Or (($level -le 3) -And ($settingisVulnerable -eq 1))) {
                 Write-NoEmpties -output $output
+                ""
                 if ($MSIPathAccess) {
-                    ""
                     Write-Title -Text "Permissions on source file:" -DividerChar "-"                    
                     Write-Output $MSIPathAccess
+                    ""
                 }
             }
-            "`r`n"
         }
     }
 }
@@ -426,7 +426,7 @@ Function Get-GPOScripts {
     ######
 
 	$settingsScripts = ($polXml.ExtensionData.Extension.Script | Sort-Object GPOSettingOrder)
-
+    
     if ($settingsScripts) {
 	    foreach ($setting in $settingsScripts) {
             $commandPath = $setting.Command
@@ -450,14 +450,13 @@ Function Get-GPOScripts {
             
             if (($level -le 2) -Or (($level -le 3) -And ($settingisVulnerable -eq 1))) {
                 Write-NoEmpties -output $output
+                ""
                 if ($commandPathAccess) {
-                    ""
                     Write-Title -Text "Permissions on source file:" -DividerChar "-"                    
                     Write-Output $commandPathAccess
+                    ""
                 }
             }
-            "`r`n"
-            
         }
     }
 }
@@ -503,13 +502,13 @@ Function Get-GPOFileUpdate {
 
             if (($level -le 2) -Or (($level -le 3) -And ($settingisVulnerable -eq 1))) {
                 Write-NoEmpties -output $output
+                ""
                 if ($fromPathAccess) {
-                    ""
                     Write-Title -Text "Permissions on source file:" -DividerChar "-"                    
                     Write-Output $fromPathAccess
+                    ""
                 }
             }
-            "`r`n"            
         }
     }
 }
@@ -886,7 +885,7 @@ Function Get-GPONetworkShares {
     $GPOisinteresting = 0
 
 	$settingsNetShares = ($polXml.Computer.ExtensionData.Extension.NetworkShares.Netshare | Sort-Object GPOSettingOrder)
-
+    
     if ($settingsNetShares) {
 	    foreach ($setting in $settingsNetShares) {
             if ($level -le 2) {
@@ -1108,13 +1107,13 @@ Function Get-GPOShortcuts {
 
             if (($level -le 2) -Or (($level -le 3) -And ($settingisVulnerable -eq 1))) {
                 Write-NoEmpties -output $output
+                ""
                 if ($targetPathAccess) {
-                    ""
                     Write-Title -Text "Permissions on source file:" -DividerChar "-"                    
                     Write-Output $targetPathAccess
+                    ""
                 }
             }
-            "`r`n"
         }
     }
 }
@@ -1211,8 +1210,9 @@ Function Write-Banner {
     $Pattern = ('White','Yellow','Red','Red','DarkRed','DarkRed','White','White')
     ""
     ""
+    $i = 0
     foreach ($barfline in $barf) {
-        Write-ColorText -Text $barfline -Color $Pattern[$barf.IndexOf($barfline)]
+        Write-ColorText -Text $barfline -Color $Pattern[$i]
         $i += 1
     }
 }
@@ -1266,43 +1266,43 @@ Function Invoke-AuditGPO {
         $Global:unlinkedpols += 1
         return $null
     }
-
+    
     # Define settings groups so we can send through both if the same type of policy settings can appear in either.
     $computerSettings = $xmlgpo.Computer
     $userSettings = $xmlgpo.User
 
     # Build an array of all our Get-GPO* check scriptblocks
     $polchecks = @()
-    $polchecks += {Get-GPORegKeys -Level $level -polXML $computerSettings}
-    $polchecks += {Get-GPORegKeys -Level $level -polXML $userSettings}
-    $polchecks += {Get-GPOUsers -Level $level -polXML $userSettings}
-    $polchecks += {Get-GPOUsers -Level $level -polXML $computerSettings}
-    $polchecks += {Get-GPOGroups -Level $level -polXML $userSettings}
-    $polchecks += {Get-GPOGroups -Level $level -polXML $computerSettings}
+   #$polchecks += {Get-GPORegKeys -Level $level -polXML $computerSettings}
+   #$polchecks += {Get-GPORegKeys -Level $level -polXML $userSettings}
+   #$polchecks += {Get-GPOUsers -Level $level -polXML $userSettings}
+   #$polchecks += {Get-GPOUsers -Level $level -polXML $computerSettings}
+   #$polchecks += {Get-GPOGroups -Level $level -polXML $userSettings}
+   #$polchecks += {Get-GPOGroups -Level $level -polXML $computerSettings}
     $polchecks += {Get-GPOScripts -Level $level -polXML $userSettings}
     $polchecks += {Get-GPOScripts -Level $level -polXML $computerSettings}
     $polchecks += {Get-GPOFileUpdate -Level $level -polXML $userSettings}
     $polchecks += {Get-GPOFileUpdate -Level $level -polXML $computerSettings}
     $polchecks += {Get-GPOMSIInstallation -Level $level -polXML $userSettings}
     $polchecks += {Get-GPOMSIInstallation -Level $level -polXML $computerSettings}
-    $polchecks += {Get-GPOUserRights -Level $level -polXML $xmlgpo}
-    $polchecks += {Get-GPOSchedTasks -Level $level -polXML $xmlgpo}
-    $polchecks += {Get-GPOFolderRedirection -Level $level -polXML $xmlgpo}
-    $polchecks += {Get-GPOFilePerms -Level $level -polXML $xmlgpo}
-    $polchecks += {Get-GPOSecurityOptions -Level $level -polXML $xmlgpo}
-    $polchecks += {Get-GPOAccountSettings -Level $level -polXML $xmlgpo}
-    $polchecks += {Get-GPONetworkShares -Level $level -polXml $xmlgpo}
-    $polchecks += {Get-GPOFolders -Level $level -polXML $userSettings}
-    $polchecks += {Get-GPOFolders -Level $level -polXML $computerSettings}
-    $polchecks += {Get-GPORegSettings -Level $level -polXML $computerSettings}
-    $polchecks += {Get-GPORegSettings -Level $level -polXML $userSettings}
-    $polchecks += {Get-GPOIniFiles -Level $level -polXML $computerSettings}
-    $polchecks += {Get-GPOIniFiles -Level $level -polXML $userSettings}
-    $polchecks += {Get-GPOEnvVars -Level $level -polXML $computerSettings}
-    $polchecks += {Get-GPOEnvVars -Level $level -polXML $userSettings}
-    $polchecks += {Get-GPOShortcuts -Level $level -polXml $userSettings}
+    #$polchecks += {Get-GPOUserRights -Level $level -polXML $xmlgpo}
+    #$polchecks += {Get-GPOSchedTasks -Level $level -polXML $xmlgpo}
+    #$polchecks += {Get-GPOFolderRedirection -Level $level -polXML $xmlgpo}
+    #$polchecks += {Get-GPOFilePerms -Level $level -polXML $xmlgpo}
+    #$polchecks += {Get-GPOSecurityOptions -Level $level -polXML $xmlgpo}
+    #$polchecks += {Get-GPOAccountSettings -Level $level -polXML $xmlgpo}
+    #$polchecks += {Get-GPONetworkShares -Level $level -polXml $xmlgpo}
+    #$polchecks += {Get-GPOFolders -Level $level -polXML $userSettings}
+    #$polchecks += {Get-GPOFolders -Level $level -polXML $computerSettings}
+    #$polchecks += {Get-GPORegSettings -Level $level -polXML $computerSettings}
+    #$polchecks += {Get-GPORegSettings -Level $level -polXML $userSettings}
+    #$polchecks += {Get-GPOIniFiles -Level $level -polXML $computerSettings}
+    #$polchecks += {Get-GPOIniFiles -Level $level -polXML $userSettings}
+    #$polchecks += {Get-GPOEnvVars -Level $level -polXML $computerSettings}
+    #$polchecks += {Get-GPOEnvVars -Level $level -polXML $userSettings}
+    #$polchecks += {Get-GPOShortcuts -Level $level -polXml $userSettings}
     $polchecks += {Get-GPOShortcuts -Level $level -polXml $computerSettings}
-
+    
     # Write a pretty green header with the report name and some other nice details
     $headers = @()
     $headers += {'==============================================================='}
@@ -1466,13 +1466,13 @@ Function Invoke-AuditGPOReport {
     # quick and dirty check to make sure that if the user said to do 'online' checks that we can actually reach the domain.
     $Global:onlineChecks = 0
     if ($online) {
-        try {
-            net accounts /domain 1> $null
+        if ((Test-Path "\\$env:UserDomain\SYSVOL") -eq $true) {
+            Write-Output "`r`nConfirmed connectivity to AD domain, including online-only checks.`r`n"
             $Global:onlineChecks = 1
         }
-        catch {
-            Write-Output "Couldn't talk to the domain, falling back to offline mode."
-            $Global:onlineChecks =0
+        else {
+            Write-Output "`r`nCouldn't talk to the domain, falling back to offline mode.`r`n"
+            $Global:onlineChecks = 0
         }
         
     }
@@ -1500,10 +1500,6 @@ Function Invoke-AuditGPOReport {
     # iterate over them running the selected checks
     foreach ($xmlgpo in $xmlgpos) {
         Invoke-AuditGPO -xmlgpo $xmlgpo -Level $level
-
-        if ($gpoaudit -ne $false) {
-            $gpoaudit
-        }
     }
 
     $gpocount = ($xmlgpos.Count, 1 -ne $null)[0]
@@ -1511,6 +1507,7 @@ Function Invoke-AuditGPOReport {
     Write-Title -Color "Green" -DividerChar "*" -Text "Stats"
     $stats = @()
     $stats += ('Display Level: {0}' -f $level)
+    $stats += ('Online Checks Performed: {0}' -f $Global:onlineChecks)
     $stats += ('Displayed GPOs: {0}' -f $Global:displayedPols)
     $stats += ('Unlinked GPOs: {0}' -f $Global:unlinkedPols)
     $stats += ('Interesting Policy Settings: {0}' -f $Global:interestingPolSettings)
@@ -1518,3 +1515,4 @@ Function Invoke-AuditGPOReport {
     $stats += ('Total GPOs: {0}' -f $gpocount)
     Write-Output $stats
 }
+

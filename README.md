@@ -45,7 +45,7 @@ Get-GPOReport -All -ReportType xml -Path C:\temp\gporeport.xml
 Import the Grouper module.
 
 ```
-Import-Module grouper.ps1
+Import-Module .\grouper.ps1
 ```
 
 Run Grouper.

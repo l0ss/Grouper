@@ -155,10 +155,10 @@ Function Get-GPOUsers {
     }
 
     if ($GPOisinteresting -eq 1) {
-        $Global:interestingPolSettings += 1
+        $Global:GPOsWithIntSettings += 1
     }
     if ($GPOisvulnerable -eq 1) {
-        $Global:vulnerablePolSettings += 1
+        $Global:GPOsWithVulnSettings += 1
     }
 }
 
@@ -228,10 +228,10 @@ Function Get-GPOGroups {
     }
 
     if ($GPOisinteresting -eq 1) {
-        $Global:interestingPolSettings += 1
+        $Global:GPOsWithIntSettings += 1
     }
     if ($GPOIsVulnerable -eq 1) {
-        $Global:vulnerablePolSettings += 1
+        $Global:GPOsWithVulnSettings += 1
     }
 }
 
@@ -301,11 +301,11 @@ Function Get-GPOUserRights {
     }
 
     if ($GPOisinteresting -eq 1) {
-        $Global:interestingPolSettings += 1
+        $Global:GPOsWithIntSettings += 1
     }
 
     if ($GPOIsVulnerable -eq 1) {
-        $Global:vulnerablePolSettings += 1
+        $Global:GPOsWithVulnSettings += 1
     }
 }
 
@@ -372,11 +372,11 @@ Function Get-GPOSchedTasks {
     }
 
     if ($GPOisinteresting -eq 1) {
-        $Global:interestingPolSettings += 1
+        $Global:GPOsWithIntSettings += 1
     }
 
     if ($GPOisvulnerable -eq 1) {
-        $Global:vulnerablePolSettings += 1
+        $Global:GPOsWithVulnSettings += 1
     }
 }
 
@@ -432,10 +432,10 @@ Function Get-GPOMSIInstallation {
     }
 
     if ($GPOisinteresting -eq 1) {
-        $Global:interestingPolSettings += 1
+        $Global:GPOsWithIntSettings += 1
     }
     if ($GPOisvulnerable -eq 1) {
-        $Global:vulnerablePolSettings += 1
+        $Global:GPOsWithVulnSettings += 1
     }
 }
 
@@ -494,10 +494,10 @@ Function Get-GPOScripts {
     }
 
     if ($GPOisinteresting -eq 1) {
-        $Global:interestingPolSettings += 1
+        $Global:GPOsWithIntSettings += 1
     }
     if ($GPOisvulnerable -eq 1) {
-        $Global:vulnerablePolSettings += 1
+        $Global:GPOsWithVulnSettings += 1
     }
 
 }
@@ -556,10 +556,10 @@ Function Get-GPOFileUpdate {
         }
     }
     if ($GPOisinteresting -eq 1) {
-        $Global:interestingPolSettings += 1
+        $Global:GPOsWithIntSettings += 1
     }
     if ($GPOisvulnerable -eq 1) {
-        $Global:vulnerablePolSettings += 1
+        $Global:GPOsWithVulnSettings += 1
     }
 
 }
@@ -715,7 +715,7 @@ Function Get-GPOSecurityOptions {
     }
 
     if ($GPOisinteresting -eq 1) {
-        $Global:interestingPolSettings += 1
+        $Global:GPOsWithIntSettings += 1
     }
 }
 
@@ -796,11 +796,11 @@ Function Get-GPORegKeys {
 
     # update the global counters
     if ($GPOisivulnerable -eq 1) {
-        $Global:vulnerablePolSettings += 1
+        $Global:GPOsWithVulnSettings += 1
     }
 
     if ($GPOisinteresting -eq 1) {
-        $Global:interestingPolSettings += 1
+        $Global:GPOsWithIntSettings += 1
     }
 
 }
@@ -885,7 +885,7 @@ Function Get-GPOAccountSettings {
 
     # update the global counters
     if ($GPOisinteresting -eq 1) {
-        $Global:interestingPolSettings += 1
+        $Global:GPOsWithIntSettings += 1
     }
 }
 
@@ -954,7 +954,7 @@ Function Get-GPONetworkShares {
     }
 
     if ($GPOisinteresting) {
-        $Global:interestingPolSettings += 1
+        $Global:GPOsWithIntSettings += 1
     }
 
 }
@@ -1175,10 +1175,10 @@ Function Get-GPOShortcuts {
     }
 
     if ($GPOisinteresting -eq 1) {
-        $Global:interestingPolSettings += 1
+        $Global:GPOsWithIntSettings += 1
     }
     if ($GPOisvulnerable -eq 1) {
-        $Global:vulnerablePolSettings += 1
+        $Global:GPOsWithVulnSettings += 1
     }
 }
 
@@ -1238,7 +1238,7 @@ Function Write-NoEmpties {
     Param (
         $output
     )
-
+    # this function literally just prints hash tables but skips any with an empty value.
     Foreach ($outpair in $output.GetEnumerator()) {
                     if (-Not (("", $null) -Contains $outpair.Value)) {
                         Write-Output ($outpair)
@@ -1251,6 +1251,7 @@ Function Write-ColorText {
         [Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()][string]$Text,
         [Parameter(Mandatory=$false)][ValidateSet('Black', 'DarkBlue', 'DarkGreen', 'DarkCyan', 'DarkRed', 'DarkMagenta', 'DarkYellow', 'Gray', 'DarkGray', 'Blue', 'Green', 'Cyan', 'Red', 'Magenta', 'Yellow', 'White', ignorecase=$true)] [string]$Color = $host.ui.RawUI.ForegroundColor
     )
+    # does what it says on the tin - writes text in colour.
     $DefForegroundColor = $host.ui.RawUI.ForegroundColor
     $host.ui.RawUI.ForegroundColor = $Color
     Write-Output $Text
@@ -1295,6 +1296,9 @@ Function Find-IntACL {
     Param (
         [Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()][string]$Path
     )
+    # Consumes a file path, returns a hash table containing the owner, a hash table of trustees, and a value for 
+    # "Vulnerable" to show if current user can write the target file, determined by attempting to open the target 
+    # file for writing, then immediately closing it.
     $ACLData = @{}
     try {
         $targetPathACL = Get-ACL $Path -ErrorAction Stop
@@ -1319,7 +1323,7 @@ Function Find-IntACL {
 #_____________________________________________________________________
 Function Invoke-AuditGPO {
     [cmdletbinding()]
-    # Consumes <GPO> objects from a Get-GPOReport xml report.
+    # Consumes <GPO> objects from a Get-GPOReport xml report and returns findings based on the $level filter.
     Param (
         [Parameter(Mandatory=$true)][System.Xml.XmlElement]$xmlgpo,
         [Parameter(Mandatory=$true)][ValidateSet(1,2,3)][int]$level
@@ -1454,7 +1458,7 @@ Function Invoke-AuditGPO {
                         $permOutput.Add("Access", $GPOACE.Standard.GPOGroupedAccessEnum)
                     }
                 }
-
+                # then print out the GPO's permissions
                 if ($permOutput.Count -gt 0) {
                     Write-Title -DividerChar "#" -Color "Yellow" -Text "GPO Permissions"
                     Write-Output $permOutput "`r`n"
@@ -1519,6 +1523,8 @@ Function Invoke-AuditGPOReport {
         [switch]$online
     )
 
+    # This sucker actually consumes the file, does the stuff, this is the guy, you know?
+
     Write-Banner
 
     if ($PSCmdlet.ParameterSetName -eq 'WithFile') {
@@ -1527,8 +1533,8 @@ Function Invoke-AuditGPOReport {
 
     # couple of counters for the stats at the end
     $Global:unlinkedpols = 0
-    $Global:interestingPolSettings = 0
-    $Global:vulnerablePolSettings = 0
+    $Global:GPOsWithIntSettings = 0
+    $Global:GPOsWithVulnSettings = 0
     $Global:displayedpols = 0
 
     #handle our arguments
@@ -1585,9 +1591,8 @@ Function Invoke-AuditGPOReport {
     $stats += ('Display Level: {0}' -f $level)
     $stats += ('Displayed GPOs: {0}' -f $Global:displayedPols)
     $stats += ('Unlinked GPOs: {0}' -f $Global:unlinkedPols)
-    # commenting these two out until I can sort them out properly.
-    #$stats += ('Interesting Policy Settings: {0}' -f $Global:interestingPolSettings)
-    #$stats += ('Vulnerable Policy Settings: {0}' -f $Global:vulnerablePolSettings)
+    $stats += ('GPOs Containing Interesting Settings: {0}' -f $Global:GPOsWithIntSettings)
+    $stats += ('GPOs Containing Vulnerable Settings: {0}' -f $Global:GPOsWithVulnSettings)
     $stats += ('Total GPOs: {0}' -f $gpocount)
     Write-Output $stats
 }

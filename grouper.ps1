@@ -825,7 +825,7 @@ Function Get-GPOAccountSettings {
     ######
     # Description: Checks for Account Settings.
     # Level 3: TODO
-    # Level 2: TODO Add to list of 'interesting' settings. - only has one so far - undecided if i want to include weak password policy here.
+    # Level 2: If it matches our list of interesting settings - undecided if i want to include weak password policy here.
     # Level 1: All Account Settings.
     ######
 

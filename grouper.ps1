@@ -1066,8 +1066,8 @@ Function Get-GPOShortcuts {
 
     ######
     # Description: Checks for changes made to shortcuts or new shortcuts added.
-    # Vulnerable: TODO Only show instances where current user can write to target of shortcut.
-    # Interesting: TODO As above, plus where Domain Users, Authenticated Users, or Everyone can write to taret of shortcut.
+    # Vulnerable: Only show instances where current user can write to target of shortcut.
+    # Interesting: All shortcut settings that reference a network path.
     # Boring: All shortcut settings.
     ######
 
@@ -1082,6 +1082,7 @@ Function Get-GPOShortcuts {
     if ($settingsShortcuts) {
         # Iterate over array of settings, writing out only those we care about.
         foreach ($setting in $settingsShortcuts) {
+            $settingIsInteresting = 0
             $targetPath = $setting.properties.targetPath
             $output = @{}
             $output.Add("Name", $setting.name)
@@ -1096,6 +1097,7 @@ Function Get-GPOShortcuts {
             $output.Add("shortcutPath", $setting.properties.shortcutPath)
             if ($Global:onlineChecks -eq 1) {
                 if ($targetPath.StartsWith("\\")) {
+                    $settingIsInteresting = 1
                     $ACLData = Find-IntACL -Path $targetPath
                     $output.Add("Owner",$ACLData["Owner"])
                     if ($ACLData["Vulnerable"] -eq "True") {
@@ -1119,7 +1121,18 @@ Function Get-GPOShortcuts {
     }
 }
 
-# Here endeth the gross GPO check functions
+#################################
+#
+#
+#
+#   
+#   Here endeth the gross GPO check functions!
+#
+#
+#
+#
+#
+#################################
 
 #__________________________GPP decryption helper function stolen from PowerUp.ps1 by @harmjoy__________________
 function Get-DecryptedCpassword {
@@ -1477,6 +1490,7 @@ Function Invoke-AuditGPOReport {
         
     }
 
+    # if the user set $lazyMode, confirm that the relevant module is available, then generate a gporeport using some default settings.
     if ($lazyMode) {
         $requiredModules = @('GroupPolicy')
         $requiredModules | Import-Module -Verbose:$false -ErrorAction SilentlyContinue
@@ -1489,6 +1503,7 @@ Function Invoke-AuditGPOReport {
         Get-GPOReport -All -ReportType xml -Path $reportPath
         [xml]$xmldoc = get-content $reportPath
     }
+    # and if the user didn't set $lazyMode, get the contents of the report they asked us to look at
     elseif ($Path){
         # get the contents of the report file
         [xml]$xmldoc = get-content $Path
@@ -1500,10 +1515,6 @@ Function Invoke-AuditGPOReport {
     # iterate over them running the selected checks
     foreach ($xmlgpo in $xmlgpos) {
         Invoke-AuditGPO -xmlgpo $xmlgpo -Level $level
-
-        if ($gpoaudit -ne $false) {
-            $gpoaudit
-        }
     }
 
     $gpocount = ($xmlgpos.Count, 1 -ne $null)[0]
@@ -1513,8 +1524,9 @@ Function Invoke-AuditGPOReport {
     $stats += ('Display Level: {0}' -f $level)
     $stats += ('Displayed GPOs: {0}' -f $Global:displayedPols)
     $stats += ('Unlinked GPOs: {0}' -f $Global:unlinkedPols)
-    $stats += ('Interesting Policy Settings: {0}' -f $Global:interestingPolSettings)
-    $stats += ('Vulnerable Policy Settings: {0}' -f $Global:vulnerablePolSettings)
+    # commenting these two out until I can sort them out properly.
+    #$stats += ('Interesting Policy Settings: {0}' -f $Global:interestingPolSettings)
+    #$stats += ('Vulnerable Policy Settings: {0}' -f $Global:vulnerablePolSettings)
     $stats += ('Total GPOs: {0}' -f $gpocount)
     Write-Output $stats
 }

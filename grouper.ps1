@@ -456,7 +456,10 @@ Function Get-GPOScripts {
 	$settingsScripts = ($polXml.ExtensionData.Extension.Script | Sort-Object GPOSettingOrder)
 
     if ($settingsScripts) {
-	    foreach ($setting in $settingsScripts) {
+        $GPOisinteresting = 1
+        $GPOisvulnerable = 0
+
+        foreach ($setting in $settingsScripts) {
             $commandPath = $setting.Command
             $output = @{}
             $output.Add("Command", $commandPath)
@@ -470,6 +473,7 @@ Function Get-GPOScripts {
                     $output.Add("Owner",$ACLData["Owner"])
                     if ($ACLData["Vulnerable"] -eq "True") {
                         $settingisvulnerable = 1
+                        $GPOIsVulnerable = 1
                         $output.Add("[!]", "Source file writable by current user!")
                     }
                     $commandPathAccess = $ACLData["Trustees"]
@@ -488,6 +492,14 @@ Function Get-GPOScripts {
             
         }
     }
+
+    if ($GPOisinteresting -eq 1) {
+        $Global:interestingPolSettings += 1
+    }
+    if ($GPOisvulnerable -eq 1) {
+        $Global:vulnerablePolSettings += 1
+    }
+
 }
 
 Function Get-GPOFileUpdate {

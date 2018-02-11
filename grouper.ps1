@@ -846,7 +846,7 @@ Function Get-GPOAccountSettings {
     ######
     # Description: Checks for Account Settings.
     # Level 3: TODO
-    # Level 2: TODO Add to list of 'interesting' settings. - only has one so far
+    # Level 2: TODO Add to list of 'interesting' settings. - only has one so far - undecided if i want to include weak password policy here.
     # Level 1: All Account Settings.
     ######
 
@@ -1130,6 +1130,8 @@ Function Get-GPOShortcuts {
     $settingsShortcuts = ($polXml.ExtensionData.Extension.ShortcutSettings.Shortcut | Sort-Object GPOSettingOrder)
     # Check if there's actually anything in the array.
     if ($settingsShortcuts) {
+        $GPOIsInteresting = 0
+        $GPOIsVulnerable = 0
         # Iterate over array of settings, writing out only those we care about.
         foreach ($setting in $settingsShortcuts) {
             $settingIsInteresting = 0
@@ -1148,10 +1150,12 @@ Function Get-GPOShortcuts {
             if ($Global:onlineChecks -eq 1) {
                 if ($targetPath.StartsWith("\\")) {
                     $settingIsInteresting = 1
+                    $GPOIsInteresting = 1
                     $ACLData = Find-IntACL -Path $targetPath
                     $output.Add("Owner",$ACLData["Owner"])
                     if ($ACLData["Vulnerable"] -eq "True") {
                         $settingisvulnerable = 1
+                        $GPOIsVulnerable = 1
                         $output.Add("[!]", "Source file writable by current user!")
                     }
                     $targetPathAccess = $ACLData["Trustees"]
@@ -1168,6 +1172,13 @@ Function Get-GPOShortcuts {
             }
             "`r`n"
         }
+    }
+
+    if ($GPOisinteresting -eq 1) {
+        $Global:interestingPolSettings += 1
+    }
+    if ($GPOisvulnerable -eq 1) {
+        $Global:vulnerablePolSettings += 1
     }
 }
 

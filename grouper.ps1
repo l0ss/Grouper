@@ -25,7 +25,7 @@
 #>
 
 # Some arrays of group names that are 'interesting', either because they are canonically 'low-priv' and huge numbers of accounts will be in them
-# or because they are high-priv enough that members are very likely to have privileged access to the whole domain or a number of systems.
+# or because they are high-priv enough that members are very likely to have privileged access to a host, whole domain or a number of hosts.
 
 # TODO ADD TO THIS LIST
 $Global:intPrivLocalGroups = @()
@@ -37,7 +37,7 @@ $Global:intPrivLocalGroups += "Print Operators"
 $Global:intPrivLocalGroups += "Remote Desktop Users"
 $Global:intPrivLocalGroups += "Remote Management Users"
 
-# TODO ADD TO THIS LIST
+# TODO ADD TO THIS LIST?
 $Global:intLowPrivDomGroups = @()
 $Global:intLowPrivDomGroups += "Domain Users"
 $Global:intLowPrivDomGroups += "Authenticated Users"
@@ -46,8 +46,10 @@ $Global:intLowPrivDomGroups += "Everyone"
 # TODO ADD TO THIS LIST?
 $Global:intLowPrivLocalGroups = @()
 $Global:intLowPrivLocalGroups += "Users"
+$Global:intLowPrivLocalGroups += "Everyone"
+$Global:intLowPrivLocalGroups += "Authenticated Users"
 
-# TODO ADD TO THIS LIST
+# TODO ADD TO THIS LIST?
 $Global:intLowPrivGroups = @()
 $Global:intLowPrivGroups += "Domain Users"
 $Global:intLowPrivGroups += "Authenticated Users"

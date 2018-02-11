@@ -90,6 +90,13 @@ $Global:boringTrustees += "NT AUTHORITY\SYSTEM"
 
 # There's a whole pile of these functions. Each one consumes a single <GPO> object from a Get-GPOReport XML report,
 # then depending on the -Level parameter it should output interesting/vulnerable/any policy it can process.
+# The rule of thumb for whether a check function should exist at all is "Does this class of policy have any possible settings with security impact?"
+# The rule of thumb for whether a setting is "Vulnerable" enough for Level 3 is "If it is likely to result in large numbers of users or the current user
+# being able to get a shell or an RDP session on a host".
+# The rule of thumb for whether a setting is "Interesting" enough for Level 2 is "if it could meet the criteria for Level 3 but Grouper can't tell
+# whether it does without user intervention."
+# At the moment Level 1 is pretty much just showing all the settings that Grouper can parse, but in the future it should filter out settings that
+# have been configured 'securely', where there is a clear best-practice option.
 
 Function Get-GPOUsers {
     [cmdletbinding()]
@@ -271,7 +278,7 @@ Function Get-GPOUserRights {
                 $rightIsInteresting = 1
             }
 
-            # then we construct an array of trustees being granted the right to see if they are in any of our interesting low priv groups.
+            # then we construct an array of trustees being granted the right, so we can see if they are in any of our interesting low priv groups.
             if ($rightIsInteresting) {
                 foreach ($lowPrivGroup in $Global:intLowPrivGroups) {
                     foreach ($member in $members) {
@@ -390,6 +397,9 @@ Function Get-GPOMSIInstallation {
 	$MSIInstallation = ($polXml.ExtensionData.Extension.MsiApplication | Sort-Object GPOSettingOrder)
 
     if ($MSIInstallation) {
+        $GPOisinteresting = 1
+        $GPOisvulnerable = 0
+
  	    foreach ($setting in $MSIInstallation) {
             $output = @{}
             $MSIPath = $setting.Path
@@ -402,6 +412,7 @@ Function Get-GPOMSIInstallation {
                     $output.Add("Owner",$ACLData["Owner"])
                     if ($ACLData["Vulnerable"] -eq "True") {
                         $settingisvulnerable = 1
+                        $GPOisvulnerable = 1
                         $output.Add("[!]", "Source file writable by current user!")
                     }
                     $MSIPathAccess = $ACLData["Trustees"]
@@ -418,6 +429,13 @@ Function Get-GPOMSIInstallation {
             }
             "`r`n"
         }
+    }
+
+    if ($GPOisinteresting -eq 1) {
+        $Global:interestingPolSettings += 1
+    }
+    if ($GPOisvulnerable -eq 1) {
+        $Global:vulnerablePolSettings += 1
     }
 }
 

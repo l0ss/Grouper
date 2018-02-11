@@ -675,14 +675,14 @@ Function Get-GPOSecurityOptions {
                 $output.Add("Name", $setting.SystemAccessPolicyName)
                 foreach ($SAP in $intSysAccPolBool) {
                     if (($SAP.Key -eq $setting.SystemAccessPolicyName) -And ($SAP.Value -eq $setting.SettingNumber)) {
-                        $output.Add ("SettingNumber",$setting.SettingNumber)
+                        $output.Add("SettingNumber",$setting.SettingNumber)
                         $GPOisInteresting = 1
                     }
                 }
                 foreach ($SAP in $intSysAccPolString) {
                     if ($SAP.Key -eq $setting.SystemAccessPolicyName) {
                         $GPOisInteresting = 1
-                        $output.Add ("SettingString",$setting.SettingString)
+                        $output.Add("SettingString",$setting.SettingString)
                     }
                 }
                 if ($level -le 2) {
@@ -842,7 +842,7 @@ Function Get-GPOAccountSettings {
             $settingisInteresting = 0
 
             foreach ($intAccSetting in $intAccSettings) {
-                if ($intAccSetting.Key -eq $settingName) -And ($intAccSetting.Value -eq $setting.SettingBoolean) {
+                if (($intAccSetting.Key -eq $settingName) -And ($intAccSetting.Value -eq $setting.SettingBoolean)) {
                     $settingIsInteresting = 1
                     $GPOIsInteresting = 1
                 }
@@ -1577,3 +1577,5 @@ Function Invoke-AuditGPOReport {
     $stats += ('Total GPOs: {0}' -f $gpocount)
     Write-Output $stats
 }
+
+Invoke-AuditGPOReport -Path .\test_report.xml -Level 2

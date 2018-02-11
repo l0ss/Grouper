@@ -519,6 +519,8 @@ Function Get-GPOFileUpdate {
 	$settingsFiles = ($polXml.ExtensionData.Extension.FilesSettings | Sort-Object GPOSettingOrder)
 
     if ($settingsFiles) {
+        $GPOisinteresting = 1
+        $GPOisvulnerable = 0
  	    foreach ($setting in $settingsFiles.File) {
             $fromPath = $setting.Properties.fromPath
             $targetPath = $setting.Properties.targetPath
@@ -535,6 +537,7 @@ Function Get-GPOFileUpdate {
                     $output.Add("Owner",$ACLData["Owner"])
                     if ($ACLData["Vulnerable"] -eq "True") {
                         $settingisvulnerable = 1
+                        $GPOisVulnerable = 1
                         $output.Add("[!]", "Source file writable by current user!")
                     }
                     $fromPathAccess = $ACLData["Trustees"]
@@ -552,6 +555,13 @@ Function Get-GPOFileUpdate {
             "`r`n"            
         }
     }
+    if ($GPOisinteresting -eq 1) {
+        $Global:interestingPolSettings += 1
+    }
+    if ($GPOisvulnerable -eq 1) {
+        $Global:vulnerablePolSettings += 1
+    }
+
 }
 
 Function Get-GPOFilePerms {

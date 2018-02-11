@@ -24,6 +24,9 @@
      Author     : Mike Loss - mike@mikeloss.net
 #>
 
+# Some arrays of group names that are 'interesting', either because they are canonically 'low-priv' and huge numbers of accounts will be in them
+# or because they are high-priv enough that members are very likely to have privileged access to the whole domain or a number of systems.
+
 # TODO ADD TO THIS LIST
 $Global:intPrivLocalGroups = @()
 $Global:intPrivLocalGroups += "Administrators"
@@ -40,7 +43,7 @@ $Global:intLowPrivDomGroups += "Domain Users"
 $Global:intLowPrivDomGroups += "Authenticated Users"
 $Global:intLowPrivDomGroups += "Everyone"
 
-# TODO ADD TO THIS LIST
+# TODO ADD TO THIS LIST?
 $Global:intLowPrivLocalGroups = @()
 $Global:intLowPrivLocalGroups += "Users"
 
@@ -56,6 +59,11 @@ $Global:intPrivDomGroups = @()
 $Global:intPrivDomGroups += "Domain Admins"
 $Global:intPrivDomGroups += "Administrators"
 $Global:intPrivDomGroups += "DNS Admins"
+$Global:intPrivDomGroups += "Backup Operators"
+$Global:intPrivDomGroups += "Enterprise Admins"
+$Global:intPrivDomGroups += "Schema Admins"
+$Global:intPrivDomGroups += "Server Operators"
+$Global:intPrivDomGroups += "Account Operators"
 
 # THIS ONE IS FINE
 $Global:intRights = @()
@@ -87,9 +95,9 @@ Function Get-GPOUsers {
 
     ######
     # Description: Checks for changes made to local users.
-    # Vulnerable: Only show instances where a password has been set, i.e. GPP Passwords.
-    # Interesting: All users and all changes.
-    # Boring: All users and all changes.
+    # Level 3: Only show instances where a password has been set, i.e. GPP Passwords.
+    # Level 2: All users and all changes.
+    # Level 1: All users and all changes.
     ######
 
     Param (
@@ -154,9 +162,9 @@ Function Get-GPOGroups {
 
     ######
     # Description: Checks for changes made to local groups.
-    # Vulnerable: If Domain Users, Everyone, Authenticated Users get added to 'interesting groups'.
-    # Interesting: Show changes to groups that grant meaningful security-relevant access.
-    # Boring: All groups and all changes.
+    # Level 3: If Domain Users, Everyone, Authenticated Users get added to 'interesting groups'.
+    # Level 2: Show changes to groups that grant meaningful security-relevant access.
+    # Level 1: All groups and all changes.
     ######
 
     $GPOIsInteresting = 0
@@ -228,10 +236,10 @@ Function Get-GPOUserRights {
 
     ######
     # Description: Checks for user rights granted to users and groups.
-    # Vulnerable: Only show "Interesting" rights, i.e. those that can be used for local privilege escalation or remote access,
+    # Level 3: Only show "Interesting" rights, i.e. those that can be used for local privilege escalation or remote access,
     #             and only if they've been assigned to Domain Users, Authenticated Users, or Everyone.
-    # Interesting: Only show "Interesting" rights, i.e. those that can be used for local privilege escalation or remote access.
-    # Boring: All non-default.
+    # Level 2: Only show "Interesting" rights, i.e. those that can be used for local privilege escalation or remote access.
+    # Level 1: All non-default.
     ######
 
     $GPOIsInteresting = 0
@@ -301,9 +309,9 @@ Function Get-GPOSchedTasks {
 
     ######
     # Description: Checks for scheduled tasks being configured on a host.
-    # Vulnerable: Only show instances where a password has been set.
-    # Interesting: TODO If a password has been set or the thing being run is non-local or there are arguments set.
-    # Boring: All scheduled tasks.
+    # Level 3: Only show instances where a password has been set.
+    # Level 2: TODO If a password has been set or the thing being run is non-local or there are arguments set.
+    # Level 1: All scheduled tasks.
     ######
 
     $GPOisinteresting = 0
@@ -372,9 +380,9 @@ Function Get-GPOMSIInstallation {
 
     ######
     # Description: Checks for MSI installers being used to install software.
-    # Vulnerable: TODO Only show instances where the file is writable by the current user or 'Everyone' or 'Domain Users' or 'Authenticated Users'.
-    # Interesting: All MSI installations.
-    # Boring: All MSI installations.
+    # Level 3: TODO Only show instances where the file is writable by the current user or 'Everyone' or 'Domain Users' or 'Authenticated Users'.
+    # Level 2: All MSI installations.
+    # Level 1: All MSI installations.
     ######
 
 	$MSIInstallation = ($polXml.ExtensionData.Extension.MsiApplication | Sort-Object GPOSettingOrder)
@@ -420,9 +428,9 @@ Function Get-GPOScripts {
 
     ######
     # Description: Checks for startup/shutdown/logon/logoff scripts.
-    # Vulnerable: TODO Only show instances where the file is writable by the current user or 'Everyone' or 'Domain Users' or 'Authenticated Users'.
-    # Interesting: All scripts.
-    # Boring: All scripts.
+    # Level 3: TODO Only show instances where the file is writable by the current user or 'Everyone' or 'Domain Users' or 'Authenticated Users'.
+    # Level 2: All scripts.
+    # Level 1: All scripts.
     ######
 
 	$settingsScripts = ($polXml.ExtensionData.Extension.Script | Sort-Object GPOSettingOrder)
@@ -471,9 +479,9 @@ Function Get-GPOFileUpdate {
 
     ######
     # Description: Checks for files being copied/updated/whatever.
-    # Vulnerable: TODO Only show instances where the 'fromPath' file is writable by the current user or 'Everyone' or 'Domain Users' or 'Authenticated Users'.
-    # Interesting: All File Updates where FromPath is a network share
-    # Boring: All File Updates.
+    # Level 3: TODO Only show instances where the 'fromPath' file is writable by the current user or 'Everyone' or 'Domain Users' or 'Authenticated Users'.
+    # Level 2: All File Updates where FromPath is a network share
+    # Level 1: All File Updates.
     ######
 
 	$settingsFiles = ($polXml.ExtensionData.Extension.FilesSettings | Sort-Object GPOSettingOrder)
@@ -523,9 +531,9 @@ Function Get-GPOFilePerms {
 
     ######
     # Description: Checks for changes to local file permissions.
-    # Vulnerable: TODO Only show instances where the file is writable by the current user or 'Everyone' or 'Domain Users' or 'Authenticated Users'.
-    # Interesting: TODO Also show instances where any user/group other than the usual default Domain/Enterprise Admins has 'Full Control'.
-    # Boring: All file permission changes.
+    # Level 3: TODO Only show instances where the file is writable by the current user or 'Everyone' or 'Domain Users' or 'Authenticated Users'.
+    # Level 2: TODO Also show instances where any user/group other than the usual default Domain/Enterprise Admins has 'Full Control'.
+    # Level 1: All file permission changes.
     ######
 
 	$settingsFilePerms = ($polXml.Computer.ExtensionData.Extension.File | Sort-Object GPOSettingOrder)
@@ -552,9 +560,9 @@ Function Get-GPOSecurityOptions {
 
     ######
     # Description: Checks for potentially vulnerable "Security Options" settings.
-    # Vulnerable: TODO.
-    # Interesting: Show everything that matches $intKeyNames or $intSysAccPolName.
-    # Boring: All settings.
+    # Level 3: TODO.
+    # Level 2: Show everything that matches $intKeyNames or $intSysAccPolName.
+    # Level 1: All settings.
     ######
 
     $GPOisinteresting = 0
@@ -678,9 +686,9 @@ Function Get-GPORegKeys {
 
     ######
     # Description: Checks for registry keys being set that may contain sensitive information.
-    # Vulnerable: Any key that matches '$intKeys'.
-    # Interesting: TODO Also show instances containing the strings 'pass', 'pwd', 'cred', or 'vnc'.
-    # Boring: All Registry Keys
+    # Level 3: Any key that matches '$intKeys'.
+    # Level 2: TODO Also show instances containing the strings 'pass', 'pwd', 'cred', or 'vnc'.
+    # Level 1: All Registry Keys
     ######
 
     $GPOisinteresting = 0
@@ -764,9 +772,9 @@ Function Get-GPOFolderRedirection {
 
     ######
     # Description: Checks for user Folder redirections.
-    # Vulnerable: TODO Only show instances where DestPath is writable by the current user or 'Everyone' or 'Domain Users' or 'Authenticated Users'.
-    # Interesting: TODO Also show instances where any user/group other than the usual default Domain/Enterprise Admins has 'Full Control'.
-    # Boring: All Folder Redirection.
+    # Level 3: TODO Only show instances where DestPath is writable by the current user or 'Everyone' or 'Domain Users' or 'Authenticated Users'.
+    # Level 2: TODO Also show instances where any user/group other than the usual default Domain/Enterprise Admins has 'Full Control'.
+    # Level 1: All Folder Redirection.
     ######
 
 	$settingsFolderRedirection = ($polXml.User.ExtensionData.Extension.Folder | Sort-Object GPOSettingOrder)
@@ -795,9 +803,9 @@ Function Get-GPOAccountSettings {
 
     ######
     # Description: Checks for Account Settings.
-    # Vulnerable: TODO
-    # Interesting: TODO Add to list of 'interesting' settings. - only has one so far
-    # Boring: All Account Settings.
+    # Level 3: TODO
+    # Level 2: TODO Add to list of 'interesting' settings. - only has one so far
+    # Level 1: All Account Settings.
     ######
 
 	$settingsAccount = ($polXml.Computer.ExtensionData.Extension.Account | Sort-Object GPOSettingOrder)
@@ -848,9 +856,9 @@ Function Get-GPOFolders {
 
     ######
     # Description: Checks for creation/renaming of local folders
-    # Vulnerable: TODO
-    # Interesting: TODO Need to generate a list of 'interesting' settings.
-    # Boring: All folders changes.
+    # Level 3: TODO
+    # Level 2: TODO Need to generate a list of 'interesting' settings.
+    # Level 1: All folders changes.
     ######
 
 	$settingsFolders = ($polXml.ExtensionData.Extension.Folders.Folder | Sort-Object GPOSettingOrder)
@@ -878,9 +886,9 @@ Function Get-GPONetworkShares {
 
     ######
     # Description: Checks for Network Shares being created on hosts.
-    # Vulnerable: TODO
-    # Interesting: All Network Shares.
-    # Boring: All Network Shares.
+    # Level 3: TODO
+    # Level 2: All Network Shares.
+    # Level 1: All Network Shares.
     ######
 
     $GPOisinteresting = 0
@@ -918,9 +926,9 @@ Function Get-GPOIniFiles {
 
     ######
     # Description: Checks for changes to .INI files.
-    # Vulnerable: TODO
-    # Interesting: TODO Need to generate a list of 'interesting' settings.
-    # Boring: All .INI file changes.
+    # Level 3: TODO
+    # Level 2: TODO Need to generate a list of 'interesting' settings.
+    # Level 1: All .INI file changes.
     ######
 
     $settingsIniFiles = ($polXml.ExtensionData.Extension.IniFiles.Ini | Sort-Object GPOSettingOrder)
@@ -952,9 +960,9 @@ Function Get-GPOEnvVars {
 
     ######
     # Description: Checks for environment variables being set.
-    # Vulnerable: TODO
-    # Interesting: TODO Need to generate a list of 'interesting' settings.
-    # Boring: All environment variables.
+    # Level 3: TODO
+    # Level 2: TODO Need to generate a list of 'interesting' settings.
+    # Level 1: All environment variables.
     ######
 
 	$settingsEnvVars = ($polXml.ExtensionData.Extension.EnvironmentVariables.EnvironmentVariable | Sort-Object GPOSettingOrder)
@@ -983,9 +991,9 @@ Function Get-GPORegSettings {
 
     ######
     # Description: Checks for "Registry Settings" i.e. a bunch of Windows options that are defined via the registry.
-    # Vulnerable: TBD.
-    # Interesting: Need to generate a list of 'interesting' settings.
-    # Boring: All Registry Settings.
+    # Level 3: TBD.
+    # Level 2: Need to generate a list of 'interesting' settings.
+    # Level 1: All Registry Settings.
     ######
 
 	$settingsRegSettings = ($polXml.ExtensionData.Extension.Policy | Sort-Object GPOSettingOrder)
@@ -1066,9 +1074,9 @@ Function Get-GPOShortcuts {
 
     ######
     # Description: Checks for changes made to shortcuts or new shortcuts added.
-    # Vulnerable: Only show instances where current user can write to target of shortcut.
-    # Interesting: All shortcut settings that reference a network path.
-    # Boring: All shortcut settings.
+    # Level 3: Only show instances where current user can write to target of shortcut.
+    # Level 2: All shortcut settings that reference a network path.
+    # Level 1: All shortcut settings.
     ######
 
     Param (
@@ -1108,7 +1116,7 @@ Function Get-GPOShortcuts {
                 }
             }
 
-            if (($level -le 2) -Or (($level -le 3) -And ($settingisVulnerable -eq 1))) {
+            if (($level -eq 1) -Or (($level -le 2) -And ($settingIsInteresting -eq 1)) -Or (($level -le 3) -And ($settingisVulnerable -eq 1))) {
                 Write-NoEmpties -output $output
                 if ($targetPathAccess) {
                     ""

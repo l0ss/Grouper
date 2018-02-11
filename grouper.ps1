@@ -833,17 +833,19 @@ Function Get-GPOAccountSettings {
 
     $GPOisinteresting = 0
 
-    $intAccSettings = @()
-    $intAccSettings += "ClearTextPassword"
+    $intAccSettings = @{}
+    $intAccSettings.Add("ClearTextPassword","true")
 
     if ($settingsAccount) {
 	    foreach ($setting in $settingsAccount) {
             $settingName = $setting.Name
             $settingisInteresting = 0
 
-            if ($intAccSettings -Contains $settingName) {
-                $settingisInteresting = 1
-                $GPOisInteresting = 1
+            foreach ($intAccSetting in $intAccSettings) {
+                if ($intAccSetting.Key -eq $settingName) -And ($intAccSetting.Value -eq $setting.SettingBoolean) {
+                    $settingIsInteresting = 1
+                    $GPOIsInteresting = 1
+                }
             }
 
             if (($level -eq 1) -Or (($settingisInteresting -eq 1) -And ($level -le 2))) {

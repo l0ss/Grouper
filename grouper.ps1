@@ -608,105 +608,84 @@ Function Get-GPOSecurityOptions {
     ######
 
     $GPOisinteresting = 0
-
 	$settingsSecurityOptions = ($polXml.Computer.ExtensionData.Extension.SecurityOptions | Sort-Object GPOSettingOrder)
 
     if ($settingsSecurityOptions) {
+        
+        $intKeyNamesBool = @{}
+        $intKeyNamesBool.Add("MACHINE\System\CurrentControlSet\Control\Lsa\DisableDomainCreds", "false")
+        $intKeyNamesBool.Add("MACHINE\System\CurrentControlSet\Control\Lsa\EveryoneIncludesAnonymous", "true")
+        $intKeyNamesBool.Add("MACHINE\System\CurrentControlSet\Control\Lsa\LimitBlankPasswordUse", "false")
+        $intKeyNamesBool.Add("MACHINE\System\CurrentControlSet\Control\Lsa\NoLMHash", "false")
+        $intKeyNamesBool.Add("MACHINE\System\CurrentControlSet\Control\Lsa\RestrictAnonymous", "false")
+        $intKeyNamesBool.Add("MACHINE\System\CurrentControlSet\Control\Lsa\RestrictAnonymousSAM", "false")
+        $intKeyNamesBool.Add("MACHINE\System\CurrentControlSet\Control\Lsa\SubmitControl", "true")
+        $intKeyNamesBool.Add("MACHINE\System\CurrentControlSet\Control\Lsa\UseMachineId", "true")
+        $intKeyNamesBool.Add("MACHINE\System\CurrentControlSet\Control\Print\Providers\LanMan Print Services\Servers\AddPrinterDrivers", "false")
+        
+        $intKeyNamesList = @()
+        $intKeyNamesList += "MACHINE\System\CurrentControlSet\Control\SecurePipeServers\Winreg\AllowedExactPaths\Machine"
+        $intKeyNamesList += "MACHINE\System\CurrentControlSet\Control\SecurePipeServers\Winreg\AllowedPaths\Machine"
+        $intKeyNamesList += "MACHINE\System\CurrentControlSet\Services\LanManServer\Parameters\NullSessionPipes"
+        $intKeyNamesList += "MACHINE\System\CurrentControlSet\Services\LanManServer\Parameters\NullSessionShares"
+        $intKeyNamesList += "MACHINE\System\CurrentControlSet\Services\LanManServer\Parameters\RestrictNullSessAccess"
 
-        $intKeyNames = @()
-        $intKeyNames += "MACHINE\Software\Microsoft\Windows\CurrentVersion\Policies\System\ScForceOption"
-        $intKeyNames += "MACHINE\System\CurrentControlSet\Control\Lsa\DisableDomainCreds"
-        $intKeyNames += "MACHINE\System\CurrentControlSet\Control\Lsa\EveryoneIncludesAnonymous"
-        $intKeyNames += "MACHINE\System\CurrentControlSet\Control\Lsa\LimitBlankPasswordUse"
-        $intKeyNames += "MACHINE\System\CurrentControlSet\Control\Lsa\NoLMHash"
-        $intKeyNames += "MACHINE\System\CurrentControlSet\Control\Lsa\RestrictAnonymous"
-        $intKeyNames += "MACHINE\System\CurrentControlSet\Control\Lsa\RestrictAnonymousSAM"
-        $intKeyNames += "MACHINE\System\CurrentControlSet\Control\Lsa\SubmitControl"
-        $intKeyNames += "MACHINE\System\CurrentControlSet\Control\Lsa\UseMachineId"
-        $intKeyNames += "MACHINE\System\CurrentControlSet\Control\Print\Providers\LanMan Print Services\Servers\AddPrinterDrivers"
-        $intKeyNames += "MACHINE\System\CurrentControlSet\Control\SecurePipeServers\Winreg\AllowedExactPaths\Machine"
-        $intKeyNames += "MACHINE\System\CurrentControlSet\Control\SecurePipeServers\Winreg\AllowedPaths\Machine"
-        $intKeyNames += "MACHINE\System\CurrentControlSet\Services\LanManServer\Parameters\NullSessionPipes"
-        $intKeyNames += "MACHINE\System\CurrentControlSet\Services\LanManServer\Parameters\NullSessionShares"
-        $intKeyNames += "MACHINE\System\CurrentControlSet\Services\LanManServer\Parameters\RestrictNullSessAccess"
+        $intSysAccPolBool = @{}
+        $intSysAccPolBool.Add("EnableGuestAccount", "1")
+        $intSysAccPolBool.Add("EnableAdminAccount", "1")
+        $intSysAccPolBool.Add("LSAAnonymousNameLookup", "1")
 
-        $intSysAccPolNames = @()
-        $intSysAccPolNames += "EnableGuestAccount"
-        $intSysAccPolNames += "EnableAdminAccount"
-        $intSysAccPolNames += "LSAAnonymousNameLookup"
-        $intSysAccPolNames += "NewAdministratorName"
-        $intSysAccPolNames += "NewGuestName"
+        $intSysAccPolString = @{}
+        $intSysAccPolString.Add("NewAdministratorName", "")
+        $intSysAccPolString.Add("NewGuestName", "")
 
  	    foreach ($setting in $settingsSecurityOptions) {
-
-            #Check if it's a registry based option
+            #Check if it's a registry based option or a 'system access policy name'
             if ($setting.KeyName) {
-
                 $keyname = $setting.KeyName
-                $keynameisint = 0
+                $output = @{}
+                $output.Add("Name", $setting.Display.Name)
+                $output.Add("KeyName", $setting.KeyName)
 
-                #Check if it's one of the ones we care about
-                if ($intKeyNames -contains $KeyName) {
-                  #if it is, don't bother checking the rest
-                  $keynameisint = 1
-                  break
-                  $GPOisinteresting = 1
-                }
-
-                # if it's interesting, grab the text we want to know from the setting and add it to our output array
-                if ((($keynameisint -eq 1) -And ($level -le 2)) -Or ($level -eq 1)) {
-                    $output = @{}
-                    $output.Add("Name", $setting.Display.Name)
-                    $output.Add("KeyName", $setting.KeyName)
-
-                    $values = @{}
-                    $dispunits = $setting.Display.DisplayUnits
-                    if ($dispunits) {
-                        $values.Add("DisplayUnits", $dispunits)
-                    }
-
-                    $dispbool = $setting.Display.DisplayBoolean
-                    if ($dispbool) {
-                        $values.Add("DisplayBoolean", $dispbool)
-                    }
-
-                    $dispnum = $setting.Display.DisplayNumber
-                    if ($dispnum) {
-                        $values.Add("DisplayNumber", $dispnum)
-                    }
-
-                    $dispstring = $setting.Display.DisplayString
-                    if ($dispstring) {
-                        $values.Add("DisplayString",$dispstring)
-                    }
-
+                if ($intKeyNamesList.Keys -contains $KeyName) {
+                    $GPOisInteresting = 1
                     $dispstrings = $setting.Display.DisplayStrings.Value
-                    if ($dispstrings) {
-                        $i = 0
-                        foreach ($dispstring in $dispstrings) {
-                           $values.Add("DisplayString$i", $dispstring)
-                           $i += 1
+                    $i = 0
+                    foreach ($dispstring in $dispstrings) {
+                       $output.Add("Path/Pipe$i", $dispstring)
+                       $i += 1
+                    }
+                }
+                #Check what type of key/value pair we're looking at, and if it matches our 'known bad' value.
+                else {
+                    foreach ($keyNameBool in $intKeyNamesBool) {
+                        if (($keyNameBool.Key -eq $keyname) -And ($keyNameBool.Value -eq $setting.Display.DisplayBoolean)) {
+                            $GPOisInteresting = 1
+                            $output.Add("DisplayBoolean", $setting.Display.DisplayBoolean)
                         }
                     }
+                }
+                if ($level -le 2) {
                     Write-NoEmpties -output $output
-                    Write-NoEmpties -output $values
                     "`r`n"
                 }
             }
-
-            if ($setting.SystemAccessPolicyName) {
-                if ($intSysAccPolNames -Contains $setting.SystemAccessPolicyName) {
-                    $GPOisinteresting = 1
+            elseif ($setting.SystemAccessPolicyName) {
+                $output = @{}
+                $output.Add("Name", $setting.SystemAccessPolicyName)
+                foreach ($SAP in $intSysAccPolBool) {
+                    if (($SAP.Key -eq $setting.SystemAccessPolicyName) -And ($SAP.Value -eq $setting.SettingNumber)) {
+                        $output.Add ("SettingNumber",$setting.SettingNumber)
+                        $GPOisInteresting = 1
+                    }
                 }
-                if ((($intSysAccPolNames -Contains $setting.SystemAccessPolicyName) -And ($level -le 2)) -Or ($level -eq 1)) {
-                    $output = @{}
-                    $output.Add("Name", $setting.SystemAccessPolicyName)
-                    if ($setting.SettingNumber) {
-                        $output.Add("SettingNumber", $setting.SettingNumber)
+                foreach ($SAP in $intSysAccPolString) {
+                    if ($SAP.Key -eq $setting.SystemAccessPolicyName) {
+                        $GPOisInteresting = 1
+                        $output.Add ("SettingString",$setting.SettingString)
                     }
-                    if ($setting.SettingString) {
-                        $output.Add("SettingString", $setting.SettingString)
-                    }
+                }
+                if ($level -le 2) {
                     Write-NoEmpties -output $output
                     "`r`n"
                 }

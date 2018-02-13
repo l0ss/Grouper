@@ -611,83 +611,97 @@ Function Get-GPOSecurityOptions {
 	$settingsSecurityOptions = ($polXml.Computer.ExtensionData.Extension.SecurityOptions | Sort-Object GPOSettingOrder)
 
     if ($settingsSecurityOptions) {
-        
-        $intKeyNamesBool = @{}
-        $intKeyNamesBool.Add("MACHINE\System\CurrentControlSet\Control\Lsa\DisableDomainCreds", "false")
-        $intKeyNamesBool.Add("MACHINE\System\CurrentControlSet\Control\Lsa\EveryoneIncludesAnonymous", "true")
-        $intKeyNamesBool.Add("MACHINE\System\CurrentControlSet\Control\Lsa\LimitBlankPasswordUse", "false")
-        $intKeyNamesBool.Add("MACHINE\System\CurrentControlSet\Control\Lsa\NoLMHash", "false")
-        $intKeyNamesBool.Add("MACHINE\System\CurrentControlSet\Control\Lsa\RestrictAnonymous", "false")
-        $intKeyNamesBool.Add("MACHINE\System\CurrentControlSet\Control\Lsa\RestrictAnonymousSAM", "false")
-        $intKeyNamesBool.Add("MACHINE\System\CurrentControlSet\Control\Lsa\SubmitControl", "true")
-        $intKeyNamesBool.Add("MACHINE\System\CurrentControlSet\Control\Lsa\UseMachineId", "true")
-        $intKeyNamesBool.Add("MACHINE\System\CurrentControlSet\Control\Print\Providers\LanMan Print Services\Servers\AddPrinterDrivers", "false")
-        
-        $intKeyNamesList = @()
-        $intKeyNamesList += "MACHINE\System\CurrentControlSet\Control\SecurePipeServers\Winreg\AllowedExactPaths\Machine"
-        $intKeyNamesList += "MACHINE\System\CurrentControlSet\Control\SecurePipeServers\Winreg\AllowedPaths\Machine"
-        $intKeyNamesList += "MACHINE\System\CurrentControlSet\Services\LanManServer\Parameters\NullSessionPipes"
-        $intKeyNamesList += "MACHINE\System\CurrentControlSet\Services\LanManServer\Parameters\NullSessionShares"
-        $intKeyNamesList += "MACHINE\System\CurrentControlSet\Services\LanManServer\Parameters\RestrictNullSessAccess"
+        if ($level -le 2) {
+            $intKeyNameBools = @{}
+            $intKeyNameBools.Add("MACHINE\System\CurrentControlSet\Control\Lsa\DisableDomainCreds", "false")
+            $intKeyNameBools.Add("MACHINE\System\CurrentControlSet\Control\Lsa\EveryoneIncludesAnonymous", "true")
+            $intKeyNameBools.Add("MACHINE\System\CurrentControlSet\Control\Lsa\LimitBlankPasswordUse", "false")
+            $intKeyNameBools.Add("MACHINE\System\CurrentControlSet\Control\Lsa\NoLMHash", "false")
+            $intKeyNameBools.Add("MACHINE\System\CurrentControlSet\Control\Lsa\RestrictAnonymous", "false")
+            $intKeyNameBools.Add("MACHINE\System\CurrentControlSet\Control\Lsa\RestrictAnonymousSAM", "false")
+            $intKeyNameBools.Add("MACHINE\System\CurrentControlSet\Control\Lsa\SubmitControl", "true")
+            $intKeyNameBools.Add("MACHINE\System\CurrentControlSet\Control\Lsa\UseMachineId", "true")
+            $intKeyNameBools.Add("MACHINE\System\CurrentControlSet\Control\Print\Providers\LanMan Print Services\Servers\AddPrinterDrivers", "false")
 
-        $intSysAccPolBool = @{}
-        $intSysAccPolBool.Add("EnableGuestAccount", "1")
-        $intSysAccPolBool.Add("EnableAdminAccount", "1")
-        $intSysAccPolBool.Add("LSAAnonymousNameLookup", "1")
+            $intKeyNameLists = @()
+            $intKeyNameLists += "MACHINE\System\CurrentControlSet\Control\SecurePipeServers\Winreg\AllowedExactPaths\Machine"
+            $intKeyNameLists += "MACHINE\System\CurrentControlSet\Control\SecurePipeServers\Winreg\AllowedPaths\Machine"
+            $intKeyNameLists += "MACHINE\System\CurrentControlSet\Services\LanManServer\Parameters\NullSessionPipes"
+            $intKeyNameLists += "MACHINE\System\CurrentControlSet\Services\LanManServer\Parameters\NullSessionShares"
+            $intKeyNameLists += "MACHINE\System\CurrentControlSet\Services\LanManServer\Parameters\RestrictNullSessAccess"
 
-        $intSysAccPolString = @{}
-        $intSysAccPolString.Add("NewAdministratorName", "")
-        $intSysAccPolString.Add("NewGuestName", "")
+            $intSysAccPolBools = @{}
+            $intSysAccPolBools.Add("EnableGuestAccount", 1)
+            $intSysAccPolBools.Add("EnableAdminAccount", 1)
+            $intSysAccPolBools.Add("LSAAnonymousNameLookup", 1)
 
- 	    foreach ($setting in $settingsSecurityOptions) {
-            #Check if it's a registry based option or a 'system access policy name'
-            if ($setting.KeyName) {
-                $keyname = $setting.KeyName
-                $output = @{}
-                $output.Add("Name", $setting.Display.Name)
-                $output.Add("KeyName", $setting.KeyName)
+            $intSysAccPolStrings = @{}
+            $intSysAccPolStrings.Add("NewAdministratorName", "")
+            $intSysAccPolStrings.Add("NewGuestName", "")
 
-                if ($intKeyNamesList.Keys -contains $KeyName) {
-                    $GPOisInteresting = 1
-                    $dispstrings = $setting.Display.DisplayStrings.Value
-                    $i = 0
-                    foreach ($dispstring in $dispstrings) {
-                       $output.Add("Path/Pipe$i", $dispstring)
-                       $i += 1
+     	    foreach ($setting in $settingsSecurityOptions) {
+            #Check if it's a registry based option
+                if ($setting.KeyName) {
+                    $keyname = $setting.KeyName
+                    $output = @{}
+                    $values = @{}
+                    $foundit = 0
+                    if ($foundit -eq 0) {
+                        foreach ($intKeyNameList in $intKeyNameLists) {
+                            if ($intKeyNameList -eq $keyname) {
+                                $GPOisInteresting = 1
+                                $foundit = 1
+                                $output.Add("Name", $setting.Display.Name) 
+                                $output.Add("KeyName", $setting.KeyName)
+                                $dispstrings = $setting.Display.DisplayStrings.Value
+                                #here we have to iterate over the list of values
+                                $i = 0
+                                foreach ($dispstring in $dispstrings) {
+                                    $values.Add("Path/Pipe$i", $dispstring)
+                                    $i += 1
+                                }
+                                Write-NoEmpties -output $output
+                                Write-NoEmpties -output $values
+                                "`r`n"
+                            }
+                        }
                     }
-                }
-                #Check what type of key/value pair we're looking at, and if it matches our 'known bad' value.
-                else {
-                    foreach ($keyNameBool in $intKeyNamesBool) {
-                        if (($keyNameBool.Key -eq $keyname) -And ($keyNameBool.Value -eq $setting.Display.DisplayBoolean)) {
-                            $GPOisInteresting = 1
-                            $output.Add("DisplayBoolean", $setting.Display.DisplayBoolean)
+                    if ($foundit -eq 0) {
+                        foreach ($intKeyNameBool in $intKeyNamesBools) {
+                            if (($keyNameBool.ContainsKey($keyname)) -And ($keyNameBool.ContainsValue($setting.Display.DisplayBoolean))) {
+                                $GPOIsInteresting =1
+                                $foundit = 1
+                                $output.Add("Name", $setting.Display.Name) 
+                                $output.Add("KeyName", $setting.KeyName)
+                                $values.Add("DisplayBoolean", $setting.Display.Displayboolean)
+                                Write-NoEmpties -output $output
+                                Write-NoEmpties -output $values
+                                "`r`n"
+                            }
                         }
                     }
                 }
-                if ($level -le 2) {
-                    Write-NoEmpties -output $output
-                    "`r`n"
-                }
-            }
-            elseif ($setting.SystemAccessPolicyName) {
-                $output = @{}
-                $output.Add("Name", $setting.SystemAccessPolicyName)
-                foreach ($SAP in $intSysAccPolBool) {
-                    if (($SAP.Key -eq $setting.SystemAccessPolicyName) -And ($SAP.Value -eq $setting.SettingNumber)) {
-                        $output.Add("SettingNumber",$setting.SettingNumber)
-                        $GPOisInteresting = 1
+                # or a 'system access policy name'
+                elseif ($setting.SystemAccessPolicyName) {
+                    $output = @{}
+                    foreach ($SAP in $intSysAccPolBools) {
+                        if (($SAP.ContainsKey($setting.SystemAccessPolicyName)) -And ($SAP.ContainsValue($setting.SettingNumber))) {
+                            $output.Add("Name", $setting.SystemAccessPolicyName)
+                            $output.Add("SettingNumber",$setting.SettingNumber)
+                            $GPOisInteresting = 1
+                            Write-NoEmpties -output $output
+                            "`r`n"
+                        }
                     }
-                }
-                foreach ($SAP in $intSysAccPolString) {
-                    if ($SAP.Key -eq $setting.SystemAccessPolicyName) {
-                        $GPOisInteresting = 1
-                        $output.Add("SettingString",$setting.SettingString)
+                    foreach ($SAP in $intSysAccPolStrings) {
+                        if ($SAP.ContainsKey($setting.SystemAccessPolicyName)) {
+                            $output.Add("Name", $setting.SystemAccessPolicyName)
+                            $output.Add("SettingString",$setting.SettingString)
+                            $GPOisInteresting = 1
+                            Write-NoEmpties -output $output
+                            "`r`n"
+                        }
                     }
-                }
-                if ($level -le 2) {
-                    Write-NoEmpties -output $output
-                    "`r`n"
                 }
             }
         }
@@ -1149,9 +1163,9 @@ Function Get-GPOShortcuts {
                     ""
                     Write-Title -Text "Permissions on source file:" -DividerChar "-"                    
                     Write-Output $targetPathAccess
+                    ""
                 }
             }
-            "`r`n"
         }
     }
 
@@ -1332,35 +1346,35 @@ Function Invoke-AuditGPO {
 
     # Build an array of all our Get-GPO* check scriptblocks
     $polchecks = @()
-    $polchecks += {Get-GPORegKeys -Level $level -polXML $computerSettings}
-    $polchecks += {Get-GPORegKeys -Level $level -polXML $userSettings}
-    $polchecks += {Get-GPOUsers -Level $level -polXML $userSettings}
-    $polchecks += {Get-GPOUsers -Level $level -polXML $computerSettings}
-    $polchecks += {Get-GPOGroups -Level $level -polXML $userSettings}
-    $polchecks += {Get-GPOGroups -Level $level -polXML $computerSettings}
-    $polchecks += {Get-GPOScripts -Level $level -polXML $userSettings}
-    $polchecks += {Get-GPOScripts -Level $level -polXML $computerSettings}
-    $polchecks += {Get-GPOFileUpdate -Level $level -polXML $userSettings}
-    $polchecks += {Get-GPOFileUpdate -Level $level -polXML $computerSettings}
-    $polchecks += {Get-GPOMSIInstallation -Level $level -polXML $userSettings}
-    $polchecks += {Get-GPOMSIInstallation -Level $level -polXML $computerSettings}
-    $polchecks += {Get-GPOUserRights -Level $level -polXML $xmlgpo}
-    $polchecks += {Get-GPOSchedTasks -Level $level -polXML $xmlgpo}
-    $polchecks += {Get-GPOFolderRedirection -Level $level -polXML $xmlgpo}
-    $polchecks += {Get-GPOFilePerms -Level $level -polXML $xmlgpo}
+    #$polchecks += {Get-GPORegKeys -Level $level -polXML $computerSettings}
+    #$polchecks += {Get-GPORegKeys -Level $level -polXML $userSettings}
+    #$polchecks += {Get-GPOUsers -Level $level -polXML $userSettings}
+    #$polchecks += {Get-GPOUsers -Level $level -polXML $computerSettings}
+    #$polchecks += {Get-GPOGroups -Level $level -polXML $userSettings}
+    #$polchecks += {Get-GPOGroups -Level $level -polXML $computerSettings}
+    #$polchecks += {Get-GPOScripts -Level $level -polXML $userSettings}
+    #$polchecks += {Get-GPOScripts -Level $level -polXML $computerSettings}
+    #$polchecks += {Get-GPOFileUpdate -Level $level -polXML $userSettings}
+    #$polchecks += {Get-GPOFileUpdate -Level $level -polXML $computerSettings}
+    #$polchecks += {Get-GPOMSIInstallation -Level $level -polXML $userSettings}
+    #$polchecks += {Get-GPOMSIInstallation -Level $level -polXML $computerSettings}
+    #$polchecks += {Get-GPOUserRights -Level $level -polXML $xmlgpo}
+    #$polchecks += {Get-GPOSchedTasks -Level $level -polXML $xmlgpo}
+    #$polchecks += {Get-GPOFolderRedirection -Level $level -polXML $xmlgpo}
+    #$polchecks += {Get-GPOFilePerms -Level $level -polXML $xmlgpo}
     $polchecks += {Get-GPOSecurityOptions -Level $level -polXML $xmlgpo}
-    $polchecks += {Get-GPOAccountSettings -Level $level -polXML $xmlgpo}
-    $polchecks += {Get-GPONetworkShares -Level $level -polXml $xmlgpo}
-    $polchecks += {Get-GPOFolders -Level $level -polXML $userSettings}
-    $polchecks += {Get-GPOFolders -Level $level -polXML $computerSettings}
-    $polchecks += {Get-GPORegSettings -Level $level -polXML $computerSettings}
-    $polchecks += {Get-GPORegSettings -Level $level -polXML $userSettings}
-    $polchecks += {Get-GPOIniFiles -Level $level -polXML $computerSettings}
-    $polchecks += {Get-GPOIniFiles -Level $level -polXML $userSettings}
-    $polchecks += {Get-GPOEnvVars -Level $level -polXML $computerSettings}
-    $polchecks += {Get-GPOEnvVars -Level $level -polXML $userSettings}
-    $polchecks += {Get-GPOShortcuts -Level $level -polXml $userSettings}
-    $polchecks += {Get-GPOShortcuts -Level $level -polXml $computerSettings}
+    #$polchecks += {Get-GPOAccountSettings -Level $level -polXML $xmlgpo}
+    #$polchecks += {Get-GPONetworkShares -Level $level -polXml $xmlgpo}
+    #$polchecks += {Get-GPOFolders -Level $level -polXML $userSettings}
+    #$polchecks += {Get-GPOFolders -Level $level -polXML $computerSettings}
+    #$polchecks += {Get-GPORegSettings -Level $level -polXML $computerSettings}
+    #$polchecks += {Get-GPORegSettings -Level $level -polXML $userSettings}
+    #$polchecks += {Get-GPOIniFiles -Level $level -polXML $computerSettings}
+    #$polchecks += {Get-GPOIniFiles -Level $level -polXML $userSettings}
+    #$polchecks += {Get-GPOEnvVars -Level $level -polXML $computerSettings}
+    #$polchecks += {Get-GPOEnvVars -Level $level -polXML $userSettings}
+    #$polchecks += {Get-GPOShortcuts -Level $level -polXml $userSettings}
+    #$polchecks += {Get-GPOShortcuts -Level $level -polXml $computerSettings}
 
     # Write a pretty green header with the report name and some other nice details
     $headers = @()

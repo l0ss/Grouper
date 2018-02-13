@@ -847,8 +847,8 @@ Function Get-GPOAccountSettings {
 
     $GPOisinteresting = 0
 
-    $intAccSettings = @{}
-    $intAccSettings.Add("ClearTextPassword","true")
+    $intAccSettingBools = @{}
+    $intAccSettingBools.Add("ClearTextPassword","true")   
 
     if ($settingsAccount) {
 	    foreach ($setting in $settingsAccount) {
@@ -1363,7 +1363,7 @@ Function Invoke-AuditGPO {
     #$polchecks += {Get-GPOFolderRedirection -Level $level -polXML $xmlgpo}
     #$polchecks += {Get-GPOFilePerms -Level $level -polXML $xmlgpo}
     $polchecks += {Get-GPOSecurityOptions -Level $level -polXML $xmlgpo}
-    #$polchecks += {Get-GPOAccountSettings -Level $level -polXML $xmlgpo}
+    $polchecks += {Get-GPOAccountSettings -Level $level -polXML $xmlgpo}
     #$polchecks += {Get-GPONetworkShares -Level $level -polXml $xmlgpo}
     #$polchecks += {Get-GPOFolders -Level $level -polXML $userSettings}
     #$polchecks += {Get-GPOFolders -Level $level -polXML $computerSettings}

@@ -392,6 +392,7 @@ Function Get-GPOMSIInstallation {
                     $output.Add("Owner",$ACLData["Owner"])
                     if ($ACLData["Vulnerable"] -eq "True") {
                         $settingisvulnerable = 1
+                        $output.Add("[!]", "Source file writable by current user!")
                     }
                     $MSIPathAccess = $ACLData["Trustees"]
                 }
@@ -441,6 +442,7 @@ Function Get-GPOScripts {
                     $output.Add("Owner",$ACLData["Owner"])
                     if ($ACLData["Vulnerable"] -eq "True") {
                         $settingisvulnerable = 1
+                        $output.Add("[!]", "Source file writable by current user!")
                     }
                     $commandPathAccess = $ACLData["Trustees"]
                 }
@@ -493,6 +495,7 @@ Function Get-GPOFileUpdate {
                     $output.Add("Owner",$ACLData["Owner"])
                     if ($ACLData["Vulnerable"] -eq "True") {
                         $settingisvulnerable = 1
+                        $output.Add("[!]", "Source file writable by current user!")
                     }
                     $fromPathAccess = $ACLData["Trustees"]
                 }
@@ -1097,6 +1100,7 @@ Function Get-GPOShortcuts {
                     $output.Add("Owner",$ACLData["Owner"])
                     if ($ACLData["Vulnerable"] -eq "True") {
                         $settingisvulnerable = 1
+                        $output.Add("[!]", "Source file writable by current user!")
                     }
                     $targetPathAccess = $ACLData["Trustees"]
                 }
@@ -1513,5 +1517,3 @@ Function Invoke-AuditGPOReport {
     $stats += ('Total GPOs: {0}' -f $gpocount)
     Write-Output $stats
 }
-
-#Invoke-AuditGPOReport -Path C:\temp\gporeport.xml -Level 2 -online

@@ -1590,4 +1590,3 @@ Function Invoke-AuditGPOReport {
     Write-Output $stats
 }
 
-Invoke-AuditGPOReport -Path .\test_report.xml -Level 2

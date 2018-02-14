@@ -855,8 +855,8 @@ Function Get-GPOAccountSettings {
             $settingName = $setting.Name
             $settingisInteresting = 0
 
-            foreach ($intAccSetting in $intAccSettings) {
-                if (($intAccSetting.Key -eq $settingName) -And ($intAccSetting.Value -eq $setting.SettingBoolean)) {
+            foreach ($intAccSetting in $intAccSettingBools) {
+                if (($intAccSetting.ContainsKey($settingName)) -And ($intAccSetting.containsValue($setting.SettingBoolean))) {
                     $settingIsInteresting = 1
                     $GPOIsInteresting = 1
                 }

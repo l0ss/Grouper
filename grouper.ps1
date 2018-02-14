@@ -647,23 +647,21 @@ Function Get-GPOSecurityOptions {
                     $values = @{}
                     $foundit = 0
                     if ($foundit -eq 0) {
-                        foreach ($intKeyNameList in $intKeyNameLists) {
-                            if ($intKeyNameList -eq $keyname) {
-                                $GPOisInteresting = 1
-                                $foundit = 1
-                                $output.Add("Name", $setting.Display.Name) 
-                                $output.Add("KeyName", $setting.KeyName)
-                                $dispstrings = $setting.Display.DisplayStrings.Value
-                                #here we have to iterate over the list of values
-                                $i = 0
-                                foreach ($dispstring in $dispstrings) {
-                                    $values.Add("Path/Pipe$i", $dispstring)
-                                    $i += 1
-                                }
-                                Write-NoEmpties -output $output
-                                Write-NoEmpties -output $values
-                                "`r`n"
+                        if ($intKeyNameLists -contains $keyname) {
+                            $GPOisInteresting = 1
+                            $foundit = 1
+                            $output.Add("Name", $setting.Display.Name) 
+                            $output.Add("KeyName", $setting.KeyName)
+                            $dispstrings = $setting.Display.DisplayStrings.Value
+                            #here we have to iterate over the list of values
+                            $i = 0
+                            foreach ($dispstring in $dispstrings) {
+                                $values.Add("Path/Pipe$i", $dispstring)
+                                $i += 1
                             }
+                            Write-NoEmpties -output $output
+                            Write-NoEmpties -output $values
+                            "`r`n"
                         }
                     }
                     if ($foundit -eq 0) {

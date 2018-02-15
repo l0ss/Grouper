@@ -1325,7 +1325,7 @@ Function Invoke-AuditGPO {
     $gpoisenabled = $xmlgpo.LinksTo.Enabled
     #and if it's not, increment our count of GPOs that don't do anything
     if (($gpoisenabled -ne "true") -And (!$Global:showdisabled)) {
-        $Global:unlinkedpols += 1
+        $Global:unlinkedPols += 1
         return $null
     }
 
@@ -1333,7 +1333,7 @@ Function Invoke-AuditGPO {
     $gpopath = $xmlgpo.LinksTo.SOMName
     #and if it's not, increment our count of GPOs that don't do anything
     if ((-Not $gpopath) -And (!$Global:showdisabled)) {
-        $Global:unlinkedpols += 1
+        $Global:unlinkedPols += 1
         return $null
     }
 
@@ -1481,59 +1481,60 @@ Function Invoke-AuditGPO {
 }
 
 Function Invoke-AuditGPOReport {
-    [cmdletbinding(DefaultParameterSetName='WithoutFile')]
+    [cmdletbinding(DefaultParameterSetName='NoArgs')]
     param(
         [Parameter(
-          ParameterSetName='WithFile', Mandatory=$true
+          ParameterSetName='WithFile', Mandatory=$true, HelpMessage="Path to XML GPO report"
         )]
         [ValidateScript({if(Test-Path $_ -PathType 'Leaf'){$true}else{Throw "Invalid path given: $_"}})]
         [ValidateScript({if($_ -Match '\.xml'){$true}else{Throw "Supplied file is not XML: $_"}})]
         [System.IO.FileInfo]$Path,
 
         [Parameter(
-          ParameterSetName='WithFile', Mandatory=$false
+          ParameterSetName='WithFile', Mandatory=$false, HelpMessage="Toggle filtering GPOs that aren't linked anywhere"
         )]
         [Parameter(
-          ParameterSetName='WithoutFile', Mandatory=$false
+          ParameterSetName='WithoutFile', Mandatory=$false, HelpMessage="Toggle filtering GPOs that aren't linked anywhere"
         )]
-        [switch]$showDisabled, # if not set, we filter out GPOs that aren't linked anywhere
+        [switch]$showDisabled,
 
         [Parameter(
-          ParameterSetName='WithoutFile', Mandatory=$false
+          ParameterSetName='WithoutFile', Mandatory=$false, HelpMessage="Automatically create GPO report using Get-GPOReport (Requires GroupPolicy module)"
         )]
-        [switch]$lazyMode, # if you enable this I'll do the Get-GPOReport thing for you.
+        [switch]$lazyMode,
 
         [Parameter(
-          ParameterSetName='WithFile', Mandatory=$false
+          ParameterSetName='WithFile', Mandatory=$false, HelpMessage="Set verbosity level (1 = most verbose, 3 = only show things that are definitely bad)"
         )]
         [Parameter(
-          ParameterSetName='WithoutFile', Mandatory=$false
+          ParameterSetName='WithoutFile', Mandatory=$false, HelpMessage="Set verbosity level (1 = most verbose, 3 = only show things that are definitely bad)"
         )]
         [ValidateSet(1,2,3)]
         [int]$level = 2,
 
         [Parameter(
-          ParameterSetName='WithFile', Mandatory=$false
+          ParameterSetName='WithFile', Mandatory=$false, HelpMessage="Perform online checks by actively contacting DCs within the target domain"
         )]
         [Parameter(
-          ParameterSetName='WithoutFile', Mandatory=$false
+          ParameterSetName='WithoutFile', Mandatory=$false, HelpMessage="Perform online checks by actively contacting DCs within the target domain"
         )]
         [switch]$online
     )
 
     # This sucker actually consumes the file, does the stuff, this is the guy, you know?
 
-    Write-Banner
-
-    if ($PSCmdlet.ParameterSetName -eq 'WithFile') {
-        $lazyMode = $false
+    #TODO: find a better way to do this, I'm sure it can be done with parameter sets
+    if ($PSCmdlet.ParameterSetName -eq 'NoArgs') {
+        $lazyMode = $true
     }
 
+    Write-Banner
+
     # couple of counters for the stats at the end
-    $Global:unlinkedpols = 0
+    $Global:unlinkedPols = 0
     $Global:GPOsWithIntSettings = 0
     $Global:GPOsWithVulnSettings = 0
-    $Global:displayedpols = 0
+    $Global:displayedPols = 0
 
     #handle our arguments
     $Global:showDisabled = $false

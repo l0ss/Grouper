@@ -1535,7 +1535,7 @@ Function Invoke-AuditGPOReport {
     # quick and dirty check to make sure that if the user said to do 'online' checks that we can actually reach the domain.
     $Global:onlineChecks = $false
     if ($online) {
-        if ((Test-Path "\\$env:UserDomain\SYSVOL") -eq $true) {
+        if ((Test-Path "\\$($domain)\SYSVOL") -eq $true) {
             Write-ColorText -Text "`r`n[i] Confirmed connectivity to AD domain $domain, including online-only checks.`r`n" -Color "Green"
             $Global:onlineChecks = $true
         }
@@ -1543,7 +1543,6 @@ Function Invoke-AuditGPOReport {
             Write-ColorText -Text "`r`n[!] Couldn't talk to the domain $domain, falling back to offline mode.`r`n" -Color "Red"
             $Global:onlineChecks = $False
         }
-
     }
 
     # if the user set $lazyMode, confirm that the relevant module is available, then generate a gporeport using some default settings.

@@ -6,7 +6,7 @@ A PowerShell script for helping to find vulnerable settings in AD Group Policy.
 ###### *Photo by Jon Hanson* - <https://www.flickr.com/people/61952179@N00?rb=1> - <https://creativecommons.org/licenses/by-sa/2.0/>
 
 ## Summary
-Grouper is a slightly wobbly PowerShell module designed for pentesters and redteamers (although probably also useful for sysadmins) which sifts through the (usually very noisy) XML output from the Get-GPOReport cmdlet (part of Microsoft's Group Policy module) and identifies all the settings defined in Group Policy Objects (GPOs) that might prove useful to someone trying to do something fun/evil.
+Grouper is a PowerShell module designed for pentesters and redteamers (although probably also useful for sysadmins) which sifts through the (usually very noisy) XML output from the Get-GPOReport cmdlet (part of Microsoft's Group Policy module) and identifies all the settings defined in Group Policy Objects (GPOs) that might prove useful to someone trying to do something fun/evil.
 
 Examples of the kinds of stuff it finds in GPOs:
 * GPOs which grant modify permissions on the GPO itself to non-default users.
@@ -45,7 +45,7 @@ Get-GPOReport -All -ReportType xml -Path C:\temp\gporeport.xml
 Import the Grouper module.
 
 ```
-Import-Module grouper.ps1
+Import-Module .\grouper.ps1
 ```
 
 Run Grouper.
@@ -60,6 +60,12 @@ There's also a couple of parameters you can mess with that alter which policy se
 -showDisabled
 ```
 By default, Grouper will only show you GPOs that are currently enabled and linked to an OU in AD. This toggles that behaviour.
+```
+-Online
+```
+By default Grouper only works with the actual XML output from Get-GPOReport, and does no network comms at all, making it quite "opsec safe", though I do hate that term. 
+
+If you invoke it with -Online, Grouper will turn on checks that require talking to (at least) the AD domain from which the report was generated, but will also likely involve talking to e.g. file servers. This will allow Grouper to do handy things like report the ACLs on files targeted by GPOs, and check if e.g. the current user can write to the file in question.
 ```
 -Level
 ```
@@ -220,10 +226,3 @@ Thank you very much to:
 * @sysop_host and @prashant3535 for their assistance and encouragement. I believe there is probably still a line or two stolen from @sysop_host still in this thing but I'm really not sure where and I would hate to blame him for my shitty code.
 
 Speaking of shitty code, yes I know this is a bit of a mess. I've tried to make it as modular as possible so others should be able to add additional checks without too much hassle, but it still needs a lot of love. If you see a mistake I've made that desperately needs fixing, please let me know.
-
-## TODO
-
-* Add explanations to each check function to provide guidance on what to look for to see if a thing is vulnerable, how to exploit vulnerable configs, etc.
-* Remove reliance on RSAT/Group Policy cmdlets to generate the initial report or fold the required code into this script so it can be run on any machine with PS installed.
-* Implement more checks to separate 'could be bad' configurations from 'almost certainly bad'.
-* Implement checks for some of the more common non-default Group Policy templates, e.g. MS Office, Citrix, etc.

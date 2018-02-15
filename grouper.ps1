@@ -255,9 +255,9 @@ Function Get-GPOUserRights {
     $GPOIsVulnerable = 0
 
     $uraSettings = ($polXml.Computer.ExtensionData.Extension.UserRightsAssignment)
-
+    
     $uraSettings = ($uraSettings | ? {$_}) #Strips null elements from array - nfi why I was getting so many of these.
-
+    
     if ($uraSettings) {
         foreach ($setting in $uraSettings) {
             $settingIsInteresting = 0
@@ -421,13 +421,13 @@ Function Get-GPOMSIInstallation {
 
             if (($level -le 2) -Or (($level -le 3) -And ($settingisVulnerable -eq 1))) {
                 Write-NoEmpties -output $output
+                ""
                 if ($MSIPathAccess) {
-                    ""
                     Write-Title -Text "Permissions on source file:" -DividerChar "-"                    
                     Write-Output $MSIPathAccess
+                    ""
                 }
             }
-            "`r`n"
         }
     }
 
@@ -454,7 +454,7 @@ Function Get-GPOScripts {
     ######
 
 	$settingsScripts = ($polXml.ExtensionData.Extension.Script | Sort-Object GPOSettingOrder)
-
+    
     if ($settingsScripts) {
         $GPOisinteresting = 1
         $GPOisvulnerable = 0
@@ -482,14 +482,13 @@ Function Get-GPOScripts {
             
             if (($level -le 2) -Or (($level -le 3) -And ($settingisVulnerable -eq 1))) {
                 Write-NoEmpties -output $output
+                ""
                 if ($commandPathAccess) {
-                    ""
                     Write-Title -Text "Permissions on source file:" -DividerChar "-"                    
                     Write-Output $commandPathAccess
+                    ""
                 }
             }
-            "`r`n"
-            
         }
     }
 
@@ -546,13 +545,13 @@ Function Get-GPOFileUpdate {
 
             if (($level -le 2) -Or (($level -le 3) -And ($settingisVulnerable -eq 1))) {
                 Write-NoEmpties -output $output
+                ""
                 if ($fromPathAccess) {
-                    ""
                     Write-Title -Text "Permissions on source file:" -DividerChar "-"                    
                     Write-Output $fromPathAccess
+                    ""
                 }
             }
-            "`r`n"            
         }
     }
     if ($GPOisinteresting -eq 1) {
@@ -929,7 +928,7 @@ Function Get-GPONetworkShares {
     $GPOisinteresting = 0
 
 	$settingsNetShares = ($polXml.Computer.ExtensionData.Extension.NetworkShares.Netshare | Sort-Object GPOSettingOrder)
-
+    
     if ($settingsNetShares) {
 	    foreach ($setting in $settingsNetShares) {
             if ($level -le 2) {
@@ -1157,8 +1156,8 @@ Function Get-GPOShortcuts {
 
             if (($level -eq 1) -Or (($level -le 2) -And ($settingIsInteresting -eq 1)) -Or (($level -le 3) -And ($settingisVulnerable -eq 1))) {
                 Write-NoEmpties -output $output
+                ""
                 if ($targetPathAccess) {
-                    ""
                     Write-Title -Text "Permissions on source file:" -DividerChar "-"                    
                     Write-Output $targetPathAccess
                     ""
@@ -1279,8 +1278,9 @@ Function Write-Banner {
     $Pattern = ('White','Yellow','Red','Red','DarkRed','DarkRed','White','White')
     ""
     ""
+    $i = 0
     foreach ($barfline in $barf) {
-        Write-ColorText -Text $barfline -Color $Pattern[$barf.IndexOf($barfline)]
+        Write-ColorText -Text $barfline -Color $Pattern[$i]
         $i += 1
     }
 }
@@ -1337,7 +1337,7 @@ Function Invoke-AuditGPO {
         $Global:unlinkedpols += 1
         return $null
     }
-
+    
     # Define settings groups so we can send through both if the same type of policy settings can appear in either.
     $computerSettings = $xmlgpo.Computer
     $userSettings = $xmlgpo.User
@@ -1373,7 +1373,7 @@ Function Invoke-AuditGPO {
     $polchecks += {Get-GPOEnvVars -Level $level -polXML $userSettings}
     $polchecks += {Get-GPOShortcuts -Level $level -polXml $userSettings}
     $polchecks += {Get-GPOShortcuts -Level $level -polXml $computerSettings}
-
+    
     # Write a pretty green header with the report name and some other nice details
     $headers = @()
     $headers += {'==============================================================='}
@@ -1520,6 +1520,11 @@ Function Invoke-AuditGPOReport {
 
     Write-Banner
 
+    if ($PSVersionTable.PSVersion.Major -le 2) {
+        Write-ColorText -Color "Red" -Text "Sorry, Grouper is not yet compatible with PowerShell 2.0."
+        break
+    }
+
     if ($PSCmdlet.ParameterSetName -eq 'WithFile') {
         $lazyMode = $false
     }
@@ -1539,13 +1544,13 @@ Function Invoke-AuditGPOReport {
     # quick and dirty check to make sure that if the user said to do 'online' checks that we can actually reach the domain.
     $Global:onlineChecks = 0
     if ($online) {
-        try {
-            net accounts /domain 1> $null
+        if ((Test-Path "\\$env:UserDomain\SYSVOL") -eq $true) {
+            Write-Output "`r`nConfirmed connectivity to AD domain, including online-only checks.`r`n"
             $Global:onlineChecks = 1
         }
-        catch {
-            Write-Output "Couldn't talk to the domain, falling back to offline mode."
-            $Global:onlineChecks =0
+        else {
+            Write-Output "`r`nCouldn't talk to the domain, falling back to offline mode.`r`n"
+            $Global:onlineChecks = 0
         }
         
     }
@@ -1582,6 +1587,7 @@ Function Invoke-AuditGPOReport {
     Write-Title -Color "Green" -DividerChar "*" -Text "Stats"
     $stats = @()
     $stats += ('Display Level: {0}' -f $level)
+    $stats += ('Online Checks Performed: {0}' -f $Global:onlineChecks)
     $stats += ('Displayed GPOs: {0}' -f $Global:displayedPols)
     $stats += ('Unlinked GPOs: {0}' -f $Global:unlinkedPols)
     $stats += ('GPOs Containing Interesting Settings: {0}' -f $Global:GPOsWithIntSettings)

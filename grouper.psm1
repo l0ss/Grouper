@@ -1228,7 +1228,7 @@ function Get-DecryptedCpassword {
 
 Function Write-NoEmpties {
     Param (
-        [Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()][Hashtable]$output
+        [Parameter(Mandatory=$true)][ValidateNotNull()][Hashtable]$output
     )
     # this function literally just prints hash tables but skips any with an empty value.
     Foreach ($outpair in $output.GetEnumerator() | Where-Object Value) {
@@ -1482,7 +1482,7 @@ Function Invoke-AuditGPOReport {
     [cmdletbinding(DefaultParameterSetName='NoArgs')]
     param(
         [Parameter(ParameterSetName='WithFile', Mandatory=$true, HelpMessage="Path to XML GPO report")]
-        [Parameter(ParameterSetName='OnlineDomain', Mandatory=$true, HelpMessage="Path to XML GPO report")]
+        [Parameter(ParameterSetName='OnlineDomain', Mandatory=$false, HelpMessage="Path to XML GPO report")]
         [ValidateScript({if(Test-Path $_ -PathType 'Leaf'){$true}else{Throw "Invalid path given: $_"}})]
         [ValidateScript({if($_ -Match '\.xml'){$true}else{Throw "Supplied file is not XML: $_"}})]
         [System.IO.FileInfo]$Path,
@@ -1492,24 +1492,16 @@ Function Invoke-AuditGPOReport {
         [Parameter(ParameterSetName='OnlineDomain', Mandatory=$false, HelpMessage="Toggle filtering GPOs that aren't linked anywhere")]
         [switch]$showDisabled,
 
-        [Parameter(ParameterSetName='WithoutFile', Mandatory=$false, HelpMessage="Automatically create GPO report using Get-GPOReport (Requires GroupPolicy module)")]
-        [Parameter(ParameterSetName='OnlineDomain', Mandatory=$false, HelpMessage="Automatically create GPO report using Get-GPOReport (Requires GroupPolicy module)")]
-        [switch]$lazyMode,
-
         [Parameter(ParameterSetName='WithFile', Mandatory=$false, HelpMessage="Set verbosity level (1 = most verbose, 3 = only show things that are definitely bad)")]
         [Parameter(ParameterSetName='WithoutFile', Mandatory=$false, HelpMessage="Set verbosity level (1 = most verbose, 3 = only show things that are definitely bad)")]
         [Parameter(ParameterSetName='OnlineDomain', Mandatory=$false, HelpMessage="Set verbosity level (1 = most verbose, 3 = only show things that are definitely bad)")]
         [ValidateSet(1,2,3)]
         [int]$level = 2,
 
-        #[Parameter(ParameterSetName='WithFile', Mandatory=$false, HelpMessage="Perform online checks by actively contacting DCs within the target domain")]
-        #[Parameter(ParameterSetName='WithoutFile', Mandatory=$false, HelpMessage="Perform online checks by actively contacting DCs within the target domain")]
-        [Parameter(ParameterSetName='OnlineDomain', Mandatory=$true, HelpMessage="Perform online checks by actively contacting DCs within the target domain")]
+        [Parameter(ParameterSetName='OnlineDomain', Mandatory=$false, HelpMessage="Perform online checks by actively contacting DCs within the target domain")]
         [switch]$online,
 
-        #[Parameter(ParameterSetName='WithFile', Mandatory=$false, HelpMessage="Domain to target for online checks")]
-        #[Parameter(ParameterSetName='WithoutFile', Mandatory=$false, HelpMessage="Domain to target for online checks")]
-        [Parameter(ParameterSetName='OnlineDomain', Mandatory=$false, HelpMessage="Domain to target for online checks")]
+        [Parameter(ParameterSetName='OnlineDomain', Mandatory=$false, HelpMessage="FQDN for the domain to target for online checks")]
         [ValidateNotNullOrEmpty()]
         [string]$domain = $env:UserDomain
     )
@@ -1523,7 +1515,8 @@ Function Invoke-AuditGPOReport {
         break
     }
 
-    if ($PSCmdlet.ParameterSetName -eq 'NoArgs') {
+    #check if an xml report is specified, otherwise try to generate the report using Get-GPOReport
+    if ($Path -eq $null) {
         $lazyMode = $true
     }
 
@@ -1544,7 +1537,6 @@ Function Invoke-AuditGPOReport {
     if ($online) {
         if ((Test-Path "\\$env:UserDomain\SYSVOL") -eq $true) {
             Write-ColorText -Text "`r`n[i] Confirmed connectivity to AD domain $domain, including online-only checks.`r`n" -Color "Green"
-
             $Global:onlineChecks = $true
         }
         else {
@@ -1563,8 +1555,14 @@ Function Invoke-AuditGPOReport {
           Break
         }
 
-        $reportPath = "$($pwd)\gporeport.xml"
-        Get-GPOReport -All -ReportType xml -Path $reportPath
+        if ($PSBoundParameters.Domain -and $Global:onlineChecks) {
+          $reportPath = "$($pwd)\$($domain)_gporeport.xml"
+          Get-GPOReport -All -ReportType xml -Path $reportPath -Domain $domain
+        }
+        else {
+          $reportPath = "$($pwd)\gporeport.xml"
+          Get-GPOReport -All -ReportType xml -Path $reportPath
+        }
         [xml]$xmldoc = get-content $reportPath
     }
     # and if the user didn't set $lazyMode, get the contents of the report they asked us to look at

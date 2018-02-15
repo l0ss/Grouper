@@ -1375,8 +1375,8 @@ Function Invoke-AuditGPO {
     $headers = @()
     $headers += {'==============================================================='}
     $headers += {'Policy UID: {0}' -f $xmlgpo.Identifier.Identifier.InnerText}
-    $headers += {'Policy created on: {0:d}' -f $xmlgpo.CreatedTime}
-    $headers += {'Policy last modified: {0:d}' -f $xmlgpo.ModifiedTime}
+    $headers += {'Policy created on: {0:G}' -f ([DateTime]$xmlgpo.CreatedTime)}
+    $headers += {'Policy last modified: {0:G}' -f ([DateTime]$xmlgpo.ModifiedTime)}
     $headers += {'Policy owner: {0}' -f $xmlgpo.SecurityDescriptor.Owner.Name.InnerText}
     $headers += {'Linked OU: {0}' -f $gpopath}
     $headers += {'Link enabled: {0}' -f $gpoisenabled}

@@ -28,63 +28,63 @@
 # or because they are high-priv enough that members are very likely to have privileged access to a host, whole domain or a number of hosts.
 
 # TODO ADD TO THIS LIST
-$Global:intPrivLocalGroups = @()
-$Global:intPrivLocalGroups += "Administrators"
-$Global:intPrivLocalGroups += "Backup Operators"
-$Global:intPrivLocalGroups += "Hyper-V Administrators"
-$Global:intPrivLocalGroups += "Power Users"
-$Global:intPrivLocalGroups += "Print Operators"
-$Global:intPrivLocalGroups += "Remote Desktop Users"
-$Global:intPrivLocalGroups += "Remote Management Users"
+$intPrivLocalGroups = @()
+$intPrivLocalGroups += "Administrators"
+$intPrivLocalGroups += "Backup Operators"
+$intPrivLocalGroups += "Hyper-V Administrators"
+$intPrivLocalGroups += "Power Users"
+$intPrivLocalGroups += "Print Operators"
+$intPrivLocalGroups += "Remote Desktop Users"
+$intPrivLocalGroups += "Remote Management Users"
 
 # TODO ADD TO THIS LIST?
-$Global:intLowPrivDomGroups = @()
-$Global:intLowPrivDomGroups += "Domain Users"
-$Global:intLowPrivDomGroups += "Authenticated Users"
-$Global:intLowPrivDomGroups += "Everyone"
+$intLowPrivDomGroups = @()
+$intLowPrivDomGroups += "Domain Users"
+$intLowPrivDomGroups += "Authenticated Users"
+$intLowPrivDomGroups += "Everyone"
 
 # TODO ADD TO THIS LIST?
-$Global:intLowPrivLocalGroups = @()
-$Global:intLowPrivLocalGroups += "Users"
-$Global:intLowPrivLocalGroups += "Everyone"
-$Global:intLowPrivLocalGroups += "Authenticated Users"
+$intLowPrivLocalGroups = @()
+$intLowPrivLocalGroups += "Users"
+$intLowPrivLocalGroups += "Everyone"
+$intLowPrivLocalGroups += "Authenticated Users"
 
 # TODO ADD TO THIS LIST?
-$Global:intLowPrivGroups = @()
-$Global:intLowPrivGroups += "Domain Users"
-$Global:intLowPrivGroups += "Authenticated Users"
-$Global:intLowPrivGroups += "Everyone"
-$Global:intLowPrivGroups += "Users"
+$intLowPrivGroups = @()
+$intLowPrivGroups += "Domain Users"
+$intLowPrivGroups += "Authenticated Users"
+$intLowPrivGroups += "Everyone"
+$intLowPrivGroups += "Users"
 
 # TODO ADD TO THIS LIST
-$Global:intPrivDomGroups = @()
-$Global:intPrivDomGroups += "Domain Admins"
-$Global:intPrivDomGroups += "Administrators"
-$Global:intPrivDomGroups += "DNS Admins"
-$Global:intPrivDomGroups += "Backup Operators"
-$Global:intPrivDomGroups += "Enterprise Admins"
-$Global:intPrivDomGroups += "Schema Admins"
-$Global:intPrivDomGroups += "Server Operators"
-$Global:intPrivDomGroups += "Account Operators"
+$intPrivDomGroups = @()
+$intPrivDomGroups += "Domain Admins"
+$intPrivDomGroups += "Administrators"
+$intPrivDomGroups += "DNS Admins"
+$intPrivDomGroups += "Backup Operators"
+$intPrivDomGroups += "Enterprise Admins"
+$intPrivDomGroups += "Schema Admins"
+$intPrivDomGroups += "Server Operators"
+$intPrivDomGroups += "Account Operators"
 
 # THIS ONE IS FINE
-$Global:intRights = @()
-$Global:intRights += "SeTrustedCredManAccessPrivilege"
-$Global:intRights += "SeTcbPrivilege"
-$Global:intRights += "SeMachineAccountPrivilege"
-$Global:intRights += "SeBackupPrivilege"
-$Global:intRights += "SeCreateTokenPrivilege"
-$Global:intRights += "SeAssignPrimaryTokenPrivilege"
-$Global:intRights += "SeRestorePrivilege"
-$Global:intRights += "SeDebugPrivilege"
-$Global:intRights += "SeTakeOwnershipPrivilege"
-$Global:intRights += "SeCreateGlobalPrivilege"
-$Global:intRights += "SeLoadDriverPrivilege"
-$Global:intRights += "SeRemoteInteractiveLogonRight"
+$intRights = @()
+$intRights += "SeTrustedCredManAccessPrivilege"
+$intRights += "SeTcbPrivilege"
+$intRights += "SeMachineAccountPrivilege"
+$intRights += "SeBackupPrivilege"
+$intRights += "SeCreateTokenPrivilege"
+$intRights += "SeAssignPrimaryTokenPrivilege"
+$intRights += "SeRestorePrivilege"
+$intRights += "SeDebugPrivilege"
+$intRights += "SeTakeOwnershipPrivilege"
+$intRights += "SeCreateGlobalPrivilege"
+$intRights += "SeLoadDriverPrivilege"
+$intRights += "SeRemoteInteractiveLogonRight"
 
-$Global:boringTrustees = @()
-$Global:boringTrustees += "BUILTIN\Administrators"
-$Global:boringTrustees += "NT AUTHORITY\SYSTEM"
+$boringTrustees = @()
+$boringTrustees += "BUILTIN\Administrators"
+$boringTrustees += "NT AUTHORITY\SYSTEM"
 
 #____________________ GPO Check functions _______________
 
@@ -189,7 +189,7 @@ Function Get-GPOGroups {
 
             # check if the group being modified is one of the high-priv local groups array,
             $groupName = $setting.properties.groupName
-            if ($Global:intPrivLocalGroups -Contains $groupName) {
+            if ($intPrivLocalGroups -Contains $groupName) {
                 $GPOIsInteresting = $true
                 $settingIsInteresting = $true
                 $groupIsInteresting = $true
@@ -199,7 +199,7 @@ Function Get-GPOGroups {
             $groupmembers = $setting.properties.members.member
             foreach ($groupmember in $groupmembers) {
                 $groupMemberName = $groupmember.name
-                foreach ($lowPrivDomGroup in $Global:intLowPrivDomGroups) {
+                foreach ($lowPrivDomGroup in $intLowPrivDomGroups) {
                     if (($groupMemberName -match $lowPrivDomGroup) -And ($groupIsInteresting)){
                         $settingIsVulnerable = $true
                         $GPOIsVulnerable = $true
@@ -272,7 +272,7 @@ Function Get-GPOUserRights {
             }
 
             # if the right being assigned is in our array of interesting rights, the setting is interesting.
-            if ($Global:intRights -contains $userRight) {
+            if ($intRights -contains $userRight) {
                 $GPOisinteresting = $true
                 $settingIsInteresting = $true
                 $rightIsInteresting = $true
@@ -280,7 +280,7 @@ Function Get-GPOUserRights {
 
             # then we construct an array of trustees being granted the right, so we can see if they are in any of our interesting low priv groups.
             if ($rightIsInteresting) {
-                foreach ($lowPrivGroup in $Global:intLowPrivGroups) {
+                foreach ($lowPrivGroup in $intLowPrivGroups) {
                     foreach ($member in $members) {
                         if ($member -match $lowPrivGroup) {
                             $GPOIsVulnerable = $true
@@ -293,7 +293,7 @@ Function Get-GPOUserRights {
             if ((($settingIsVulnerable) -And ($level -le 3)) -Or (($settingIsInteresting) -And ($level -le 2)) -Or ($level -eq 1)) {
                 $output = @{}
                 $output.Add("Right", $userRight)
-                $output.Add("Members", $members)
+                $output.Add("Members", $members -join ',')
                 Write-NoEmpties -output $output
                 "`r`n"
             }
@@ -483,7 +483,7 @@ Function Get-GPOScripts {
             if (($level -le 2) -Or (($level -le 3) -And ($settingisVulnerable))) {
                 Write-NoEmpties -output $output
                 if ($commandPathAccess) {
-                    ""
+                    "`r`n"
                     Write-Title -Text "Permissions on source file:" -DividerChar "-"
                     Write-Output $commandPathAccess
                 }
@@ -547,7 +547,7 @@ Function Get-GPOFileUpdate {
             if (($level -le 2) -Or (($level -le 3) -And ($settingisVulnerable))) {
                 Write-NoEmpties -output $output
                 if ($fromPathAccess) {
-                    ""
+                    "`r`n"
                     Write-Title -Text "Permissions on source file:" -DividerChar "-"
                     Write-Output $fromPathAccess
                 }
@@ -1158,10 +1158,10 @@ Function Get-GPOShortcuts {
             if (($level -eq 1) -Or (($level -le 2) -And ($settingisInteresting)) -Or (($level -le 3) -And ($settingisVulnerable))) {
                 Write-NoEmpties -output $output
                 if ($targetPathAccess) {
-                    ""
+                    "`r`n"
                     Write-Title -Text "Permissions on source file:" -DividerChar "-"
                     Write-Output $targetPathAccess
-                    ""
+                    "`r`n"
                 }
             }
         }
@@ -1229,14 +1229,12 @@ function Get-DecryptedCpassword {
 
 Function Write-NoEmpties {
     Param (
-        $output
+        [Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()][Hashtable]$output
     )
     # this function literally just prints hash tables but skips any with an empty value.
-    Foreach ($outpair in $output.GetEnumerator()) {
-                    if (-Not (("", $null) -Contains $outpair.Value)) {
-                        Write-Output ($outpair)
-                    }
-                }
+    Foreach ($outpair in $output.GetEnumerator() | Where-Object Value) {
+        Write-Output ($outpair)
+    }
 }
 
 Function Write-ColorText {
@@ -1295,7 +1293,7 @@ Function Find-IntACL {
     try {
         $targetPathACL = Get-ACL $Path -ErrorAction Stop
         $targetPathOwner = $targetPathACL.Owner
-        $targetPathAccess = $targetPathACL.Access | Where-Object {-Not ($Global:boringTrustees -Contains $_.IdentityReference)} | select FileSystemRights,AccessControlType,IdentityReference
+        $targetPathAccess = $targetPathACL.Access | Where-Object {-Not ($boringTrustees -Contains $_.IdentityReference)} | select FileSystemRights,AccessControlType,IdentityReference
         $ACLData.Add("Owner", $targetPathOwner)
         $ACLData.Add("Trustees", $targetPathAccess)
         Try {

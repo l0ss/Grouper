@@ -114,8 +114,8 @@ Function Get-GPOUsers {
         [Parameter(Mandatory=$true)][ValidateSet(1,2,3)][int]$level
     )
 
-    $GPOisinteresting = 0
-    $GPOisvulnerable = 0
+    $GPOisinteresting = $false
+    $GPOisvulnerable = $false
 
     # Grab an array of the settings we're interested in from the GPO.
     $settingsUsers = ($polXml.ExtensionData.Extension.LocalUsersAndGroups.User | Sort-Object GPOSettingOrder)
@@ -130,14 +130,14 @@ Function Get-GPOUsers {
             #see if we have any stored encrypted passwords
             $cpasswordcrypt = $setting.properties.cpassword
             if ($cpasswordcrypt) {
-                $GPOisvulnerable = 1
+                $GPOisvulnerable = $true
 
                 # decrypt it with harmj0y's function
                 $cpasswordclear = Get-DecryptedCpassword -Cpassword $cpasswordcrypt
             }
             #if so, or if we're showing boring, show the rest of the setting
             if (($cpasswordcrypt) -Or ($level -le 2)) {
-                $GPOisinteresting = 1
+                $GPOisinteresting = $true
                 $output = @{}
                 $output.Add("Name", $setting.Name)
                 $output.Add("New Name", $setting.properties.NewName)
@@ -154,10 +154,10 @@ Function Get-GPOUsers {
         }
     }
 
-    if ($GPOisinteresting -eq 1) {
+    if ($GPOisinteresting) {
         $Global:GPOsWithIntSettings += 1
     }
-    if ($GPOisvulnerable -eq 1) {
+    if ($GPOisvulnerable) {
         $Global:GPOsWithVulnSettings += 1
     }
 }
@@ -176,23 +176,23 @@ Function Get-GPOGroups {
     # Level 1: All groups and all changes.
     ######
 
-    $GPOIsInteresting = 0
-    $GPOIsVulnerable = 0
+    $GPOIsInteresting = $false
+    $GPOIsVulnerable = $false
 
     $settingsGroups = ($polXml.ExtensionData.Extension.LocalUsersAndGroups.Group | Sort-Object GPOSettingOrder)
 
     if ($settingsGroups) {
 	    foreach ($setting in $settingsGroups) {
-            $settingIsInteresting = 0
-            $settingIsVulnerable = 0
-            $groupIsInteresting = 0
+            $settingIsInteresting = $false
+            $settingIsVulnerable = $false
+            $groupIsInteresting = $false
 
             # check if the group being modified is one of the high-priv local groups array,
             $groupName = $setting.properties.groupName
             if ($Global:intPrivLocalGroups -Contains $groupName) {
-                $GPOIsInteresting = 1
-                $settingIsInteresting = 1
-                $groupIsInteresting = 1
+                $GPOIsInteresting = $true
+                $settingIsInteresting = $true
+                $groupIsInteresting = $true
             }
 
             # if it's in that array AND a member being modified is a low-priv domain group, we flag the setting as vulnerable.
@@ -200,14 +200,14 @@ Function Get-GPOGroups {
             foreach ($groupmember in $groupmembers) {
                 $groupMemberName = $groupmember.name
                 foreach ($lowPrivDomGroup in $Global:intLowPrivDomGroups) {
-                    if (($groupMemberName -match $lowPrivDomGroup) -And ($groupIsInteresting -eq 1)){
-                        $settingIsVulnerable = 1
-                        $GPOIsVulnerable = 1
+                    if (($groupMemberName -match $lowPrivDomGroup) -And ($groupIsInteresting)){
+                        $settingIsVulnerable = $true
+                        $GPOIsVulnerable = $true
                     }
                 }
             }
 
-            if ((($settingIsVulnerable -eq 1) -And ($level -le 3)) -Or (($settingIsInteresting -eq 1) -And ($level -le 2)) -Or ($level -eq 1)) {
+            if ((($settingIsVulnerable) -And ($level -le 3)) -Or (($settingIsInteresting) -And ($level -le 2)) -Or ($level -eq 1)) {
                 $output = @{}
                 $output.Add("Name", $setting.Name)
                 $output.Add("NewName", $setting.properties.NewName)
@@ -227,10 +227,10 @@ Function Get-GPOGroups {
         }
     }
 
-    if ($GPOisinteresting -eq 1) {
+    if ($GPOisinteresting) {
         $Global:GPOsWithIntSettings += 1
     }
-    if ($GPOIsVulnerable -eq 1) {
+    if ($GPOIsVulnerable) {
         $Global:GPOsWithVulnSettings += 1
     }
 }
@@ -251,8 +251,8 @@ Function Get-GPOUserRights {
     # Level 1: All non-default.
     ######
 
-    $GPOIsInteresting = 0
-    $GPOIsVulnerable = 0
+    $GPOIsInteresting = $false
+    $GPOIsVulnerable = $false
 
     $uraSettings = ($polXml.Computer.ExtensionData.Extension.UserRightsAssignment)
 
@@ -260,9 +260,9 @@ Function Get-GPOUserRights {
 
     if ($uraSettings) {
         foreach ($setting in $uraSettings) {
-            $settingIsInteresting = 0
-            $settingIsVulnerable = 0
-            $rightIsInteresting = 0
+            $settingIsInteresting = $false
+            $settingIsVulnerable = $false
+            $rightIsInteresting = $false
 
             $userRight = $setting.Name
 
@@ -273,9 +273,9 @@ Function Get-GPOUserRights {
 
             # if the right being assigned is in our array of interesting rights, the setting is interesting.
             if ($Global:intRights -contains $userRight) {
-                $GPOisinteresting = 1
-                $settingIsInteresting = 1
-                $rightIsInteresting = 1
+                $GPOisinteresting = $true
+                $settingIsInteresting = $true
+                $rightIsInteresting = $true
             }
 
             # then we construct an array of trustees being granted the right, so we can see if they are in any of our interesting low priv groups.
@@ -283,14 +283,14 @@ Function Get-GPOUserRights {
                 foreach ($lowPrivGroup in $Global:intLowPrivGroups) {
                     foreach ($member in $members) {
                         if ($member -match $lowPrivGroup) {
-                            $GPOIsVulnerable = 1
-                            $settingIsVulnerable = 1
+                            $GPOIsVulnerable = $true
+                            $settingIsVulnerable = $true
                         }
                     }
                 }
             }
 
-            if ((($settingIsVulnerable -eq 1) -And ($level -le 3)) -Or (($settingIsInteresting) -And ($level -le 2)) -Or ($level -eq 1)) {
+            if ((($settingIsVulnerable) -And ($level -le 3)) -Or (($settingIsInteresting) -And ($level -le 2)) -Or ($level -eq 1)) {
                 $output = @{}
                 $output.Add("Right", $userRight)
                 $output.Add("Members", $members)
@@ -300,11 +300,11 @@ Function Get-GPOUserRights {
         }
     }
 
-    if ($GPOisinteresting -eq 1) {
+    if ($GPOisinteresting) {
         $Global:GPOsWithIntSettings += 1
     }
 
-    if ($GPOIsVulnerable -eq 1) {
+    if ($GPOIsVulnerable) {
         $Global:GPOsWithVulnSettings += 1
     }
 }
@@ -323,8 +323,8 @@ Function Get-GPOSchedTasks {
     # Level 1: All scheduled tasks.
     ######
 
-    $GPOisinteresting = 0
-    $GPOisvulnerable = 0
+    $GPOisinteresting = $false
+    $GPOisvulnerable = $false
 
     $settingsSchedTasks = ($polXml.Computer.ExtensionData.Extension.ScheduledTasks.Task | Sort-Object GPOSettingOrder)
 
@@ -333,8 +333,8 @@ Function Get-GPOSchedTasks {
             #see if we have any stored encrypted passwords
             $cpasswordcrypt = $setting.properties.cpassword
             if ($cpasswordcrypt) {
-                $GPOisvulnerable = 1
-                $GPOisinteresting = 1
+                $GPOisvulnerable = $true
+                $GPOisinteresting = $true
 
                 # decrypt it with harmj0y's function
                 $cpasswordclear = Get-DecryptedCpassword -Cpassword $cpasswordcrypt
@@ -342,7 +342,7 @@ Function Get-GPOSchedTasks {
             #see if any arguments have been set
             $taskArgs = $setting.Properties.args
             if ($taskArgs) {
-                $GPOisinteresting = 1
+                $GPOisinteresting = $true
             }
 
             #if so, or if we're showing everything, or if there are args and we're at level 2, show the setting.
@@ -371,11 +371,11 @@ Function Get-GPOSchedTasks {
         }
     }
 
-    if ($GPOisinteresting -eq 1) {
+    if ($GPOisinteresting) {
         $Global:GPOsWithIntSettings += 1
     }
 
-    if ($GPOisvulnerable -eq 1) {
+    if ($GPOisvulnerable) {
         $Global:GPOsWithVulnSettings += 1
     }
 }
@@ -397,8 +397,8 @@ Function Get-GPOMSIInstallation {
 	$MSIInstallation = ($polXml.ExtensionData.Extension.MsiApplication | Sort-Object GPOSettingOrder)
 
     if ($MSIInstallation) {
-        $GPOisinteresting = 1
-        $GPOisvulnerable = 0
+        $GPOisinteresting = $true
+        $GPOisvulnerable = $false
 
  	    foreach ($setting in $MSIInstallation) {
             $output = @{}
@@ -406,20 +406,20 @@ Function Get-GPOMSIInstallation {
             $output.Add("Name", $setting.Name)
             $output.Add("Path", $MSIPath)
 
-            if ($Global:onlineChecks -eq 1) {
+            if ($Global:onlineChecks) {
                 if ($MSIPath.StartsWith("\\")) {
                     $ACLData = Find-IntACL -Path $MSIPath
                     $output.Add("Owner",$ACLData["Owner"])
                     if ($ACLData["Vulnerable"] -eq "True") {
-                        $settingisvulnerable = 1
-                        $GPOisvulnerable = 1
+                        $settingIsVulnerable = $true
+                        $GPOisvulnerable = $true
                         $output.Add("[!]", "Source file writable by current user!")
                     }
                     $MSIPathAccess = $ACLData["Trustees"]
                 }
             }
 
-            if (($level -le 2) -Or (($level -le 3) -And ($settingisVulnerable -eq 1))) {
+            if (($level -le 2) -Or (($level -le 3) -And ($settingisVulnerable))) {
                 Write-NoEmpties -output $output
                 if ($MSIPathAccess) {
                     ""
@@ -431,10 +431,10 @@ Function Get-GPOMSIInstallation {
         }
     }
 
-    if ($GPOisinteresting -eq 1) {
+    if ($GPOisinteresting) {
         $Global:GPOsWithIntSettings += 1
     }
-    if ($GPOisvulnerable -eq 1) {
+    if ($GPOisvulnerable) {
         $Global:GPOsWithVulnSettings += 1
     }
 }
@@ -456,8 +456,8 @@ Function Get-GPOScripts {
 	$settingsScripts = ($polXml.ExtensionData.Extension.Script | Sort-Object GPOSettingOrder)
 
     if ($settingsScripts) {
-        $GPOisinteresting = 1
-        $GPOisvulnerable = 0
+        $GPOisinteresting = $true
+        $GPOisvulnerable = $false
 
         foreach ($setting in $settingsScripts) {
             $commandPath = $setting.Command
@@ -465,22 +465,22 @@ Function Get-GPOScripts {
             $output.Add("Command", $commandPath)
             $output.Add("Type", $setting.Type)
             $output.Add("Parameters", $setting.Parameters)
-            $settingIsVulnerable = 0
+            $settingIsVulnerable = $false
 
-            if ($Global:onlineChecks -eq 1) {
+            if ($Global:onlineChecks) {
                 if ($commandPath.StartsWith("\\")) {
                     $ACLData = Find-IntACL -Path $commandPath
                     $output.Add("Owner",$ACLData["Owner"])
                     if ($ACLData["Vulnerable"] -eq "True") {
-                        $settingisvulnerable = 1
-                        $GPOIsVulnerable = 1
+                        $settingIsVulnerable = $true
+                        $GPOisvulnerable = $true
                         $output.Add("[!]", "Source file writable by current user!")
                     }
                     $commandPathAccess = $ACLData["Trustees"]
                 }
             }
 
-            if (($level -le 2) -Or (($level -le 3) -And ($settingisVulnerable -eq 1))) {
+            if (($level -le 2) -Or (($level -le 3) -And ($settingisVulnerable))) {
                 Write-NoEmpties -output $output
                 if ($commandPathAccess) {
                     ""
@@ -493,10 +493,10 @@ Function Get-GPOScripts {
         }
     }
 
-    if ($GPOisinteresting -eq 1) {
+    if ($GPOisinteresting) {
         $Global:GPOsWithIntSettings += 1
     }
-    if ($GPOisvulnerable -eq 1) {
+    if ($GPOisvulnerable) {
         $Global:GPOsWithVulnSettings += 1
     }
 
@@ -519,8 +519,8 @@ Function Get-GPOFileUpdate {
 	$settingsFiles = ($polXml.ExtensionData.Extension.FilesSettings | Sort-Object GPOSettingOrder)
 
     if ($settingsFiles) {
-        $GPOisinteresting = 1
-        $GPOisvulnerable = 0
+        $GPOisinteresting = $true
+        $GPOisvulnerable = $false
  	    foreach ($setting in $settingsFiles.File) {
             $fromPath = $setting.Properties.fromPath
             $targetPath = $setting.Properties.targetPath
@@ -529,22 +529,22 @@ Function Get-GPOFileUpdate {
             $output.Add("Action", $setting.Properties.action)
             $output.Add("fromPath", $fromPath)
             $output.Add("targetPath", $targetPath)
-            $settingIsVulnerable = 0
+            $settingIsVulnerable = $false
 
-            if ($Global:onlineChecks -eq 1) {
+            if ($Global:onlineChecks) {
                 if ($fromPath.StartsWith("\\")) {
                     $ACLData = Find-IntACL -Path $fromPath
                     $output.Add("Owner",$ACLData["Owner"])
                     if ($ACLData["Vulnerable"] -eq "True") {
-                        $settingisvulnerable = 1
-                        $GPOisVulnerable = 1
+                        $settingIsVulnerable = $true
+                        $GPOisvulnerable = $true
                         $output.Add("[!]", "Source file writable by current user!")
                     }
                     $fromPathAccess = $ACLData["Trustees"]
                 }
             }
 
-            if (($level -le 2) -Or (($level -le 3) -And ($settingisVulnerable -eq 1))) {
+            if (($level -le 2) -Or (($level -le 3) -And ($settingisVulnerable))) {
                 Write-NoEmpties -output $output
                 if ($fromPathAccess) {
                     ""
@@ -555,10 +555,10 @@ Function Get-GPOFileUpdate {
             "`r`n"
         }
     }
-    if ($GPOisinteresting -eq 1) {
+    if ($GPOisinteresting) {
         $Global:GPOsWithIntSettings += 1
     }
-    if ($GPOisvulnerable -eq 1) {
+    if ($GPOisvulnerable) {
         $Global:GPOsWithVulnSettings += 1
     }
 
@@ -607,7 +607,7 @@ Function Get-GPOSecurityOptions {
     # Level 1: All settings.
     ######
 
-    $GPOisinteresting = 0
+    $GPOisinteresting = $false
 	$settingsSecurityOptions = ($polXml.Computer.ExtensionData.Extension.SecurityOptions | Sort-Object GPOSettingOrder)
 
     if ($settingsSecurityOptions) {
@@ -648,9 +648,9 @@ Function Get-GPOSecurityOptions {
                     $foundit = 0
                     if ($foundit -eq 0) {
                         if ($intKeyNameLists -contains $keyname) {
-                            $GPOisInteresting = 1
+                            $GPOisinteresting = $true
                             $foundit = 1
-                            $output.Add("Name", $setting.Display.Name) 
+                            $output.Add("Name", $setting.Display.Name)
                             $output.Add("KeyName", $setting.KeyName)
                             $dispstrings = $setting.Display.DisplayStrings.Value
                             #here we have to iterate over the list of values
@@ -669,7 +669,7 @@ Function Get-GPOSecurityOptions {
                             if (($keyNameBool.ContainsKey($keyname)) -And ($keyNameBool.ContainsValue($setting.Display.DisplayBoolean))) {
                                 $GPOIsInteresting =1
                                 $foundit = 1
-                                $output.Add("Name", $setting.Display.Name) 
+                                $output.Add("Name", $setting.Display.Name)
                                 $output.Add("KeyName", $setting.KeyName)
                                 $values.Add("DisplayBoolean", $setting.Display.Displayboolean)
                                 Write-NoEmpties -output $output
@@ -686,7 +686,7 @@ Function Get-GPOSecurityOptions {
                         if (($SAP.ContainsKey($setting.SystemAccessPolicyName)) -And ($SAP.ContainsValue($setting.SettingNumber))) {
                             $output.Add("Name", $setting.SystemAccessPolicyName)
                             $output.Add("SettingNumber",$setting.SettingNumber)
-                            $GPOisInteresting = 1
+                            $GPOisinteresting = $true
                             Write-NoEmpties -output $output
                             "`r`n"
                         }
@@ -695,7 +695,7 @@ Function Get-GPOSecurityOptions {
                         if ($SAP.ContainsKey($setting.SystemAccessPolicyName)) {
                             $output.Add("Name", $setting.SystemAccessPolicyName)
                             $output.Add("SettingString",$setting.SettingString)
-                            $GPOisInteresting = 1
+                            $GPOisinteresting = $true
                             Write-NoEmpties -output $output
                             "`r`n"
                         }
@@ -705,7 +705,7 @@ Function Get-GPOSecurityOptions {
         }
     }
 
-    if ($GPOisinteresting -eq 1) {
+    if ($GPOisinteresting) {
         $Global:GPOsWithIntSettings += 1
     }
 }
@@ -724,8 +724,8 @@ Function Get-GPORegKeys {
     # Level 1: All Registry Keys
     ######
 
-    $GPOisinteresting = 0
-    $GPOisvulnerable = 0
+    $GPOisinteresting = $false
+    $GPOisvulnerable = $false
 
 	$settingsRegKeys = ($polXml.ExtensionData.Extension.RegistrySettings.Registry | Sort-Object GPOSettingOrder)
 
@@ -755,24 +755,24 @@ Function Get-GPORegKeys {
     if ($settingsRegKeys) {
         foreach ($setting in $settingsRegKeys) {
             $settingkey = $setting.Properties.key
-            $settingisInteresting = 0
-            $settingisVulnerable = 0
+            $settingisInteresting = $false
+            $settingIsVulnerable = $false
 
             if ($vulnKeys -Contains $settingkey) {
-                $GPOisvulnerable = 1
-                $settingisVulnerable = 1
+                $GPOisvulnerable = $true
+                $settingIsVulnerable = $true
             }
 
             foreach ($intWord in $intWords) {
                 # if either key or value include our interesting words as a substring, mark the setting as interesting
                 if (($settingkey -match $intWord) -Or ($settingValue -match $intWord)) {
-                    $GPOisinteresting = 1
-                    $settingIsInteresting = 1
+                    $GPOisinteresting = $true
+                    $settingisInteresting = $true
                 }
             }
 
             # if setting matches any of our criteria for printing (combined interest level + output level)
-            if ((($settingisVulnerable -eq 1) -And ($level -le 3)) -Or (($settingisInteresting -eq 1) -And ($level -le 2)) -Or ($level -eq 1)) {
+            if ((($settingisVulnerable) -And ($level -le 3)) -Or (($settingisInteresting) -And ($level -le 2)) -Or ($level -eq 1)) {
                 $output = @{}
                 $output.Add("Key", $settingkey)
                 $output.Add("Action", $setting.Properties.action)
@@ -786,11 +786,11 @@ Function Get-GPORegKeys {
     }
 
     # update the global counters
-    if ($GPOisivulnerable -eq 1) {
+    if ($GPOisivulnerable) {
         $Global:GPOsWithVulnSettings += 1
     }
 
-    if ($GPOisinteresting -eq 1) {
+    if ($GPOisinteresting) {
         $Global:GPOsWithIntSettings += 1
     }
 
@@ -843,24 +843,24 @@ Function Get-GPOAccountSettings {
 
 	$settingsAccount = ($polXml.Computer.ExtensionData.Extension.Account | Sort-Object GPOSettingOrder)
 
-    $GPOisinteresting = 0
+    $GPOisinteresting = $false
 
     $intAccSettingBools = @{}
-    $intAccSettingBools.Add("ClearTextPassword","true")   
+    $intAccSettingBools.Add("ClearTextPassword","true")
 
     if ($settingsAccount) {
 	    foreach ($setting in $settingsAccount) {
             $settingName = $setting.Name
-            $settingisInteresting = 0
+            $settingisInteresting = $false
 
             foreach ($intAccSetting in $intAccSettingBools) {
                 if (($intAccSetting.ContainsKey($settingName)) -And ($intAccSetting.containsValue($setting.SettingBoolean))) {
-                    $settingIsInteresting = 1
-                    $GPOIsInteresting = 1
+                    $settingisInteresting = $true
+                    $GPOisinteresting = $true
                 }
             }
 
-            if (($level -eq 1) -Or (($settingisInteresting -eq 1) -And ($level -le 2))) {
+            if (($level -eq 1) -Or (($settingisInteresting) -And ($level -le 2))) {
                 $output = @{}
                 $output.Add("Name", $settingName)
                 if ($setting.SettingBoolean) {
@@ -877,7 +877,7 @@ Function Get-GPOAccountSettings {
     }
 
     # update the global counters
-    if ($GPOisinteresting -eq 1) {
+    if ($GPOisinteresting) {
         $Global:GPOsWithIntSettings += 1
     }
 }
@@ -926,14 +926,14 @@ Function Get-GPONetworkShares {
     # Level 1: All Network Shares.
     ######
 
-    $GPOisinteresting = 0
+    $GPOisinteresting = $false
 
 	$settingsNetShares = ($polXml.Computer.ExtensionData.Extension.NetworkShares.Netshare | Sort-Object GPOSettingOrder)
 
     if ($settingsNetShares) {
 	    foreach ($setting in $settingsNetShares) {
             if ($level -le 2) {
-                $GPOisinteresting = 1
+                $GPOisinteresting = $true
                 $output = @{}
                 $output.Add("Name", $setting.name)
                 $output.Add("Action", $setting.Properties.action)
@@ -1123,11 +1123,11 @@ Function Get-GPOShortcuts {
     $settingsShortcuts = ($polXml.ExtensionData.Extension.ShortcutSettings.Shortcut | Sort-Object GPOSettingOrder)
     # Check if there's actually anything in the array.
     if ($settingsShortcuts) {
-        $GPOIsInteresting = 0
-        $GPOIsVulnerable = 0
+        $GPOisinteresting = $false
+        $GPOisvulnerable = $false
         # Iterate over array of settings, writing out only those we care about.
         foreach ($setting in $settingsShortcuts) {
-            $settingIsInteresting = 0
+            $settingisInteresting = $false
             $targetPath = $setting.properties.targetPath
             $output = @{}
             $output.Add("Name", $setting.name)
@@ -1140,22 +1140,22 @@ Function Get-GPOShortcuts {
             $output.Add("targetPath", $setting.properties.targetPath)
             $output.Add("iconPath", $setting.properties.iconPath)
             $output.Add("shortcutPath", $setting.properties.shortcutPath)
-            if ($Global:onlineChecks -eq 1) {
+            if ($Global:onlineChecks) {
                 if ($targetPath.StartsWith("\\")) {
-                    $settingIsInteresting = 1
-                    $GPOIsInteresting = 1
+                    $settingisInteresting = $true
+                    $GPOisinteresting = $true
                     $ACLData = Find-IntACL -Path $targetPath
                     $output.Add("Owner",$ACLData["Owner"])
                     if ($ACLData["Vulnerable"] -eq "True") {
-                        $settingisvulnerable = 1
-                        $GPOIsVulnerable = 1
+                        $settingIsVulnerable = $true
+                        $GPOisvulnerable = $true
                         $output.Add("[!]", "Source file writable by current user!")
                     }
                     $targetPathAccess = $ACLData["Trustees"]
                 }
             }
 
-            if (($level -eq 1) -Or (($level -le 2) -And ($settingIsInteresting -eq 1)) -Or (($level -le 3) -And ($settingisVulnerable -eq 1))) {
+            if (($level -eq 1) -Or (($level -le 2) -And ($settingisInteresting)) -Or (($level -le 3) -And ($settingisVulnerable))) {
                 Write-NoEmpties -output $output
                 if ($targetPathAccess) {
                     ""
@@ -1167,10 +1167,10 @@ Function Get-GPOShortcuts {
         }
     }
 
-    if ($GPOisinteresting -eq 1) {
+    if ($GPOisinteresting) {
         $Global:GPOsWithIntSettings += 1
     }
-    if ($GPOisvulnerable -eq 1) {
+    if ($GPOisvulnerable) {
         $Global:GPOsWithVulnSettings += 1
     }
 }
@@ -1179,7 +1179,7 @@ Function Get-GPOShortcuts {
 #
 #
 #
-#   
+#
 #   Here endeth the gross GPO check functions!
 #
 #
@@ -1288,8 +1288,8 @@ Function Find-IntACL {
     Param (
         [Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()][string]$Path
     )
-    # Consumes a file path, returns a hash table containing the owner, a hash table of trustees, and a value for 
-    # "Vulnerable" to show if current user can write the target file, determined by attempting to open the target 
+    # Consumes a file path, returns a hash table containing the owner, a hash table of trustees, and a value for
+    # "Vulnerable" to show if current user can write the target file, determined by attempting to open the target
     # file for writing, then immediately closing it.
     $ACLData = @{}
     try {
@@ -1324,7 +1324,7 @@ Function Invoke-AuditGPO {
     #check the GPO is even enabled
     $gpoisenabled = $xmlgpo.LinksTo.Enabled
     #and if it's not, increment our count of GPOs that don't do anything
-    if (($gpoisenabled -ne "true") -And ($Global:showdisabled -eq 0)) {
+    if (($gpoisenabled -ne "true") -And (!$Global:showdisabled)) {
         $Global:unlinkedpols += 1
         return $null
     }
@@ -1332,7 +1332,7 @@ Function Invoke-AuditGPO {
     #check if it's linked somewhere
     $gpopath = $xmlgpo.LinksTo.SOMName
     #and if it's not, increment our count of GPOs that don't do anything
-    if ((-Not $gpopath) -And ($Global:showdisabled -eq 0)) {
+    if ((-Not $gpopath) -And (!$Global:showdisabled)) {
         $Global:unlinkedpols += 1
         return $null
     }
@@ -1385,12 +1385,12 @@ Function Invoke-AuditGPO {
     $headers += {'==============================================================='}
 
     # In each GPO we parse, iterate through the list of checks to see if any of them return anything.
-    $headerprinted = 0
+    $headerprinted = $false
     foreach ($polcheck in $polchecks) {
         $finding = & $polcheck # run the check and store the output
         if ($finding) {
             # the first time one of the checks returns something, show the user the header with the policy name and so on
-            if ($headerprinted -ne 1) {
+            if (!$headerprinted) {
                 # Increment the total counter of displayed policies.
                 $Global:displayedPols += 1
                 # Write the title of the GPO in nice green text
@@ -1420,23 +1420,23 @@ Function Invoke-AuditGPO {
                     $ACEType = $GPOACE.Standard.GPOGroupedAccessEnum # allow v deny
                     $trusteeName = $GPOACE.Trustee.Name.InnerText # who does it apply to
                     $trusteeSID = $GPOACE.Trustee.SID.InnerText # SID of the account/group it applies to
-                    $ACEInteresting = 1 # ACEs are default interesting unless proven boring.
+                    $ACEInteresting = $true # ACEs are default interesting unless proven boring.
 
                     # check if our trustee is a 'boring' default one
                     if ($trusteeName) {
                         foreach ($boringTrustee in $boringTrustees) {
                             if ($trusteeName -match $boringTrustee) {
-                                $ACEInteresting = 0
+                                $ACEInteresting = $false
                             }
                         }
                     }
                     # check if our permission is boring
                     if (($boringPerms -Contains $ACEType) -Or ($GPOACE.Type.PermissionType -eq "Deny")){
-                        $ACEInteresting = 0
+                        $ACEInteresting = $false
                     }
 
                     # if it's still interesting,
-                    if ($ACEInteresting -eq 1) {
+                    if ($ACEInteresting) {
                         #if we have a valid trustee name, add it to the output
                         if ($trusteeName) {
                             $permOutput.Add("Trustee",$trusteeName)
@@ -1501,7 +1501,7 @@ Function Invoke-AuditGPOReport {
         [Parameter(
           ParameterSetName='WithoutFile', Mandatory=$false
         )]
-        [switch]$lazyMode = $true, # if you enable this I'll do the Get-GPOReport thing for you.
+        [switch]$lazyMode, # if you enable this I'll do the Get-GPOReport thing for you.
 
         [Parameter(
           ParameterSetName='WithFile', Mandatory=$false
@@ -1512,6 +1512,12 @@ Function Invoke-AuditGPOReport {
         [ValidateSet(1,2,3)]
         [int]$level = 2,
 
+        [Parameter(
+          ParameterSetName='WithFile', Mandatory=$false
+        )]
+        [Parameter(
+          ParameterSetName='WithoutFile', Mandatory=$false
+        )]
         [switch]$online
     )
 
@@ -1530,21 +1536,21 @@ Function Invoke-AuditGPOReport {
     $Global:displayedpols = 0
 
     #handle our arguments
-    $Global:showDisabled = 0
+    $Global:showDisabled = $false
     if ($showDisabled) {
-        $Global:showDisabled = 1
+        $Global:showDisabled = $true
     }
 
     # quick and dirty check to make sure that if the user said to do 'online' checks that we can actually reach the domain.
-    $Global:onlineChecks = 0
+    $Global:onlineChecks = $false
     if ($online) {
         try {
             net accounts /domain 1> $null
-            $Global:onlineChecks = 1
+            $Global:onlineChecks = $true
         }
         catch {
             Write-Output "Couldn't talk to the domain, falling back to offline mode."
-            $Global:onlineChecks =0
+            $Global:onlineChecks = $false
         }
 
     }
@@ -1589,4 +1595,4 @@ Function Invoke-AuditGPOReport {
     Write-Output $stats
 }
 
-Invoke-AuditGPOReport -Path .\test_report.xml -Level 2
+Export-ModuleMember -Function 'Invoke-AuditGPOReport'

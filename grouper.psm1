@@ -421,13 +421,13 @@ Function Get-GPOMSIInstallation {
 
             if (($level -le 2) -Or (($level -le 3) -And ($settingisVulnerable))) {
                 Write-NoEmpties -output $output
+                ""
                 if ($MSIPathAccess) {
-                    ""
                     Write-Title -Text "Permissions on source file:" -DividerChar "-"
                     Write-Output $MSIPathAccess
+                    ""
                 }
             }
-            "`r`n"
         }
     }
 
@@ -482,14 +482,13 @@ Function Get-GPOScripts {
 
             if (($level -le 2) -Or (($level -le 3) -And ($settingisVulnerable))) {
                 Write-NoEmpties -output $output
+                ""
                 if ($commandPathAccess) {
-                    "`r`n"
                     Write-Title -Text "Permissions on source file:" -DividerChar "-"
                     Write-Output $commandPathAccess
+                    ""
                 }
             }
-            "`r`n"
-
         }
     }
 
@@ -546,13 +545,13 @@ Function Get-GPOFileUpdate {
 
             if (($level -le 2) -Or (($level -le 3) -And ($settingisVulnerable))) {
                 Write-NoEmpties -output $output
+                ""
                 if ($fromPathAccess) {
-                    "`r`n"
                     Write-Title -Text "Permissions on source file:" -DividerChar "-"
                     Write-Output $fromPathAccess
+                    ""
                 }
             }
-            "`r`n"
         }
     }
     if ($GPOisinteresting) {
@@ -1157,8 +1156,8 @@ Function Get-GPOShortcuts {
 
             if (($level -eq 1) -Or (($level -le 2) -And ($settingisInteresting)) -Or (($level -le 3) -And ($settingisVulnerable))) {
                 Write-NoEmpties -output $output
+                ""
                 if ($targetPathAccess) {
-                    "`r`n"
                     Write-Title -Text "Permissions on source file:" -DividerChar "-"
                     Write-Output $targetPathAccess
                     "`r`n"
@@ -1277,6 +1276,7 @@ Function Write-Banner {
     $Pattern = ('White','Yellow','Red','Red','DarkRed','DarkRed','White','White')
     ""
     ""
+    $i = 0
     foreach ($barfline in $barf) {
         Write-ColorText -Text $barfline -Color $Pattern[$barf.IndexOf($barfline)]
     }
@@ -1521,12 +1521,16 @@ Function Invoke-AuditGPOReport {
 
     # This sucker actually consumes the file, does the stuff, this is the guy, you know?
 
-    #TODO: find a better way to do this, I'm sure it can be done with parameter sets
+    Write-Banner
+
+    if ($PSVersionTable.PSVersion.Major -le 2) {
+        Write-ColorText -Color "Red" -Text "Sorry, Grouper is not yet compatible with PowerShell 2.0."
+        break
+    }
+
     if ($PSCmdlet.ParameterSetName -eq 'NoArgs') {
         $lazyMode = $true
     }
-
-    Write-Banner
 
     # couple of counters for the stats at the end
     $Global:unlinkedPols = 0
@@ -1543,13 +1547,13 @@ Function Invoke-AuditGPOReport {
     # quick and dirty check to make sure that if the user said to do 'online' checks that we can actually reach the domain.
     $Global:onlineChecks = $false
     if ($online) {
-        try {
-            net accounts /domain 1> $null
-            $Global:onlineChecks = $true
+        if ((Test-Path "\\$env:UserDomain\SYSVOL") -eq $true) {
+            Write-Output "`r`nConfirmed connectivity to AD domain, including online-only checks.`r`n"
+            $Global:onlineChecks = 1
         }
-        catch {
-            Write-Output "Couldn't talk to the domain, falling back to offline mode."
-            $Global:onlineChecks = $false
+        else {
+            Write-Output "`r`nCouldn't talk to the domain, falling back to offline mode.`r`n"
+            $Global:onlineChecks = 0
         }
 
     }
@@ -1586,6 +1590,7 @@ Function Invoke-AuditGPOReport {
     Write-Title -Color "Green" -DividerChar "*" -Text "Stats"
     $stats = @()
     $stats += ('Display Level: {0}' -f $level)
+    $stats += ('Online Checks Performed: {0}' -f $Global:onlineChecks)
     $stats += ('Displayed GPOs: {0}' -f $Global:displayedPols)
     $stats += ('Unlinked GPOs: {0}' -f $Global:unlinkedPols)
     $stats += ('GPOs Containing Interesting Settings: {0}' -f $Global:GPOsWithIntSettings)

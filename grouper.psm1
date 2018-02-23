@@ -1034,74 +1034,106 @@ Function Get-GPORegSettings {
 
     if ($settingsRegSettings) {
 
+        $intRegSettings = @()
+        $intRegSettings += "Allow CredSSP authentication"
+        $intRegSettings += "Allow Basic Authentication"
+        $intRegSettings += "Set the default source path for Update-Help"
+        $intRegSettings += "Default Source Path"
+        $intRegSettings += "Allow remote server management through WinRM"
+        $intRegSettings += "Specify intranet Microsoft update service location"
+        $intRegSettings += "Set the intranet update service for detecting updates:"
+        $intRegSettings += "Set the intranet statistics server:"
+        $intRegSettings += "Allow Remote Shell Access"
+        $intRegSettings += "Allow unencrypted traffic"
+        $intRegSettings += "Sign-in last interactive user automatically after a system-initiated restart"
+        $intRegSettings += "Intranet proxy servers for  apps"
+        $intRegSettings += "Type a proxy server IP address for the intranet"
+        $intRegSettings += "Internet proxy servers for apps"
+        $intRegSettings += "Domain Proxies"
+        $intRegSettings += "Restrict Unauthenticated RPC clients"
+        $intRegSettings += "RPC Runtime Unauthenticated Client Restriction to Apply"
+        $intRegSettings += "Enable RPC Endpoint Mapper Client Authentication"
+        $intRegSettings += "Always install with elevated privileges"
+        $intRegSettings += "Specify communities"
+        $intRegSettings += "Communities"
+        $intRegSettings += "Allow non-administrators to install drivers for these device setup classes"
+        $intRegSettings += "Allow Users to install device drivers for these classes:"
+
+        $vulnRegSettings = @()
+        $vulnRegSettings += "Always install with elevated privileges"
+        $vulnRegSettings += "Specify communities"
+        $vulnRegSettings += "Communities"
+        $vulnRegSettings += "Allow non-administrators to install drivers for these device setup classes"
+        $vulnRegSettings += "Allow Users to install device drivers for these classes:"
+
+
         # I hate this nested looping shit more than anything I've ever written.
         foreach ($setting in $settingsRegSettings) {
-            if ($level -eq 1) {
+            if ($true) {
                 $output = @{}
-                $output.Add("Name", $setting.Name)
+                $output.Add("Setting Name", $setting.Name)
                 $output.Add("State", $setting.State)
                 $output.Add("Supported", $setting.Supported)
                 $output.Add("Category", $setting.Category)
                 $output.Add("Explain", $setting.Explain)
-                Write-NoEmpties -output $output
-                "`r`n"
 
-                foreach ($thing in $setting.EditText) {
-                    $output = @{}
-                    $output.Add("Name", $thing.Name)
-                    $output.Add("Value", $thing.Value)
-                    $output.Add("State", $thing.State)
+                if (($level -eq 1) -Or (($level -eq 2) -And ($intRegSettings -Contains $setting.Name)) -Or (($level -eq 3) -And ($vulnRegSettings -Contains $setting.Name))) {
                     Write-NoEmpties -output $output
-                    "`r`n"
-                }
 
-                foreach ($thing in $setting.DropDownList) {
-                    $output = @{}
-                    $output.Add("Name", $thing.Name)
-                    $output.Add("Value", $thing.Value.Name)
-                    $output.Add("State", $thing.State)
-                    Write-NoEmpties -output $output
-                    "`r`n"
-                }
-
-                foreach ($thing in $setting.ListBox) {
-                    $output = @{}
-                    $output.Add("Name", $thing.Name)
-                    $output.Add("ExplicitValue", $thing.ExplicitValue)
-                    $output.Add("State", $thing.State)
-                    $output.Add("Additive", $thing.Additive)
-                    $output.Add("ValuePrefix", $thing.ValuePrefix)
-                    $data = @()
-                    foreach ($subthing in $thing.Value) {
-                        foreach ($subsubthing in $subthing.Element) {
-                            $data += $subsubthing.Data
-                        }
+                    foreach ($thing in $setting.EditText) {
+                        $output = @{}
+                        $output.Add("Name", $thing.Name)
+                        $output.Add("Value", $thing.Value)
+                        $output.Add("State", $thing.State)
+                        Write-NoEmpties -output $output
                     }
-                    $output.Add("Data", $data)
-                    Write-NoEmpties -output $output
-                    "`r`n"
-                }
 
-                foreach ($thing in $setting.Checkbox) {
-                    $output = @{}
-                    $output.Add("Value", $thing.Name)
-                    $output.Add("State", $thing.State)
-                    Write-NoEmpties -output $output
-                    "`r`n"
-                }
+                    foreach ($thing in $setting.DropDownList) {
+                        $output = @{}
+                        $output.Add("Name", $thing.Name)
+                        $output.Add("Value", $thing.Value.Name)
+                        $output.Add("State", $thing.State)
+                        Write-NoEmpties -output $output
+                    }
 
-                foreach ($thing in $setting.Numeric) {
-                    $output = @{}
-                    $output.Add("Name", $thing.Name)
-                    $output.Add("Value", $thing.Value)
-                    $output.Add("State", $thing.State)
-                    Write-NoEmpties -output $output
-                    "`r`n"
+                    foreach ($thing in $setting.ListBox) {
+                        $output = @{}
+                        $output.Add("Name", $thing.Name)
+                        $output.Add("ExplicitValue", $thing.ExplicitValue)
+                        $output.Add("State", $thing.State)
+                        $output.Add("Additive", $thing.Additive)
+                        $output.Add("ValuePrefix", $thing.ValuePrefix)
+                        $data = @()
+                        foreach ($subthing in $thing.Value) {
+                            foreach ($subsubthing in $subthing.Element) {
+                                $data += $subsubthing.Data
+                            }
+                        }
+                        $output.Add("Data", $data)
+                        Write-NoEmpties -output $output
+                    }
+
+                    foreach ($thing in $setting.Checkbox) {
+                        $output = @{}
+                        $output.Add("Value", $thing.Name)
+                        $output.Add("State", $thing.State)
+                        Write-NoEmpties -output $output
+                    }
+
+                    foreach ($thing in $setting.Numeric) {
+                        $output = @{}
+                        $output.Add("Name", $thing.Name)
+                        $output.Add("Value", $thing.Value)
+                        $output.Add("State", $thing.State)
+                        Write-NoEmpties -output $output
+                    }
+                    Write-Output "`r`n"
                 }
             }
         }
     }
 }
+
 Function Get-GPOShortcuts {
     [cmdletbinding()]
     # Consumes a single <GPO> object from a Get-GPOReport XML report.
@@ -1228,12 +1260,14 @@ function Get-DecryptedCpassword {
 
 Function Write-NoEmpties {
     Param (
-        [Parameter(Mandatory=$true)][ValidateNotNull()][Hashtable]$output
+        $output
     )
     # this function literally just prints hash tables but skips any with an empty value.
-    Foreach ($outpair in $output.GetEnumerator() | Where-Object Value) {
-        Write-Output ($outpair)
-    }
+    Foreach ($outpair in $output.GetEnumerator()) {
+                    if (-Not (("", $null) -Contains $outpair.Value)) {
+                        Write-Output ($outpair)
+                    }
+                }
 }
 
 Function Write-ColorText {
@@ -1278,7 +1312,8 @@ Function Write-Banner {
     ""
     $i = 0
     foreach ($barfline in $barf) {
-        Write-ColorText -Text $barfline -Color $Pattern[$barf.IndexOf($barfline)]
+        Write-ColorText -Text $barfline -Color $Pattern[$i]
+        $i += 1
     }
 }
 
@@ -1481,28 +1516,28 @@ Function Invoke-AuditGPO {
 Function Invoke-AuditGPOReport {
     [cmdletbinding(DefaultParameterSetName='NoArgs')]
     param(
-        [Parameter(ParameterSetName='WithFile', Mandatory=$true, HelpMessage="Path to XML GPO report")]
-        [Parameter(ParameterSetName='OnlineDomain', Mandatory=$false, HelpMessage="Path to XML GPO report")]
+        #[Parameter(ParameterSetName='WithFile', Mandatory=$true, HelpMessage="Path to XML GPO report")]
+        #[Parameter(ParameterSetName='OnlineDomain', Mandatory=$false, HelpMessage="Path to XML GPO report")]
         [ValidateScript({if(Test-Path $_ -PathType 'Leaf'){$true}else{Throw "Invalid path given: $_"}})]
         [ValidateScript({if($_ -Match '\.xml'){$true}else{Throw "Supplied file is not XML: $_"}})]
         [System.IO.FileInfo]$Path,
 
-        [Parameter(ParameterSetName='WithFile', Mandatory=$false, HelpMessage="Toggle filtering GPOs that aren't linked anywhere")]
-        [Parameter(ParameterSetName='WithoutFile', Mandatory=$false, HelpMessage="Toggle filtering GPOs that aren't linked anywhere")]
-        [Parameter(ParameterSetName='OnlineDomain', Mandatory=$false, HelpMessage="Toggle filtering GPOs that aren't linked anywhere")]
+        #[Parameter(ParameterSetName='WithFile', Mandatory=$false, HelpMessage="Toggle filtering GPOs that aren't linked anywhere")]
+        #[Parameter(ParameterSetName='WithoutFile', Mandatory=$false, HelpMessage="Toggle filtering GPOs that aren't linked anywhere")]
+        #[Parameter(ParameterSetName='OnlineDomain', Mandatory=$false, HelpMessage="Toggle filtering GPOs that aren't linked anywhere")]
         [switch]$showDisabled,
 
-        [Parameter(ParameterSetName='WithFile', Mandatory=$false, HelpMessage="Set verbosity level (1 = most verbose, 3 = only show things that are definitely bad)")]
-        [Parameter(ParameterSetName='WithoutFile', Mandatory=$false, HelpMessage="Set verbosity level (1 = most verbose, 3 = only show things that are definitely bad)")]
-        [Parameter(ParameterSetName='OnlineDomain', Mandatory=$false, HelpMessage="Set verbosity level (1 = most verbose, 3 = only show things that are definitely bad)")]
+        #[Parameter(ParameterSetName='WithFile', Mandatory=$false, HelpMessage="Set verbosity level (1 = most verbose, 3 = only show things that are definitely bad)")]
+        #[Parameter(ParameterSetName='WithoutFile', Mandatory=$false, HelpMessage="Set verbosity level (1 = most verbose, 3 = only show things that are definitely bad)")]
+        #[Parameter(ParameterSetName='OnlineDomain', Mandatory=$false, HelpMessage="Set verbosity level (1 = most verbose, 3 = only show things that are definitely bad)")]
         [ValidateSet(1,2,3)]
         [int]$level = 2,
 
-        [Parameter(ParameterSetName='OnlineDomain', Mandatory=$false, HelpMessage="Perform online checks by actively contacting DCs within the target domain")]
+        #[Parameter(ParameterSetName='OnlineDomain', Mandatory=$false, HelpMessage="Perform online checks by actively contacting DCs within the target domain")]
         [switch]$online,
 
-        [Parameter(ParameterSetName='OnlineDomain', Mandatory=$false, HelpMessage="FQDN for the domain to target for online checks")]
-        [ValidateNotNullOrEmpty()]
+        #[Parameter(ParameterSetName='OnlineDomain', Mandatory=$false, HelpMessage="FQDN for the domain to target for online checks")]
+        #[ValidateNotNullOrEmpty()]
         [string]$domain = $env:UserDomain
     )
 
@@ -1554,7 +1589,7 @@ Function Invoke-AuditGPOReport {
           Break
         }
 
-        if ($PSBoundParameters.Domain -and $Global:onlineChecks) {
+        if ($PSBoundParameters.Domain) {
           $reportPath = "$($pwd)\$($domain)_gporeport.xml"
           Get-GPOReport -All -ReportType xml -Path $reportPath -Domain $domain
         }

@@ -1621,8 +1621,8 @@ Function Invoke-AuditGPOReport {
     $stats += ('Online Checks Performed: {0}' -f $Global:onlineChecks)
     $stats += ('Displayed GPOs: {0}' -f $Global:displayedPols)
     $stats += ('Unlinked GPOs: {0}' -f $Global:unlinkedPols)
-    $stats += ('GPOs Containing Interesting Settings: {0}' -f $Global:GPOsWithIntSettings)
-    $stats += ('GPOs Containing Vulnerable Settings: {0}' -f $Global:GPOsWithVulnSettings)
+    $stats += ('Interesting Settings: {0}' -f $Global:GPOsWithIntSettings)
+    $stats += ('Vulnerable Settings: {0}' -f $Global:GPOsWithVulnSettings)
     $stats += ('Total GPOs: {0}' -f $gpocount)
     Write-Output $stats
 }

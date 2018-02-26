@@ -1,4 +1,32 @@
 Get-GPOFilePerms - parse SDDL
 Get-GPOAccountSettings - implement filtering
 Get-GPOFolderRedirection - get permissions on target path
+Get firewall configs
 Implement pipelining of Get-GPOReport output
+
+Office:
+
+RegSettings
+    Policy
+        Name
+        State
+        Explain
+        Category
+*       DropDownList
+            Name
+*       EditText (possibly multiples)
+            Name
+            State
+            Value
+*       CheckBox
+            Name
+            State
+*       ListBox
+            Name
+            State
+            ExplicitValue
+            Additive
+            Value
+                Element
+                    Name
+                    Data

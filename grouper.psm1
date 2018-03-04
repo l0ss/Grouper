@@ -951,6 +951,94 @@ Function Get-GPONetworkShares {
 
 }
 
+Function Get-GPOFWSettings {
+    [cmdletbinding()]
+    Param (
+        [Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()][System.Xml.XmlElement]$polXML,
+        [Parameter(Mandatory=$true)][ValidateSet(1,2,3)][int]$level
+    )
+ 
+    ######
+    # Description: Checks for changes to Firewall Rules.
+    # Level 3: TODO
+    # Level 2: TODO
+    # Level 1: Show all Firewall settings
+    ######
+    if ($level -le 2) {
+        if ($polXml.Computer.ExtensionData.Extension.PrivateProfile.EnableFirewall -ne $null) {
+            $output = [ordered]@{}
+            $output.Add("Firewall Profile","PrivateProfile")
+            $output.Add("DefaultInboundAction",$polXml.Computer.ExtensionData.Extension.PrivateProfile.DefaultInboundAction.Value)
+            $output.Add("DefaultOutboundAction",$polXml.Computer.ExtensionData.Extension.PrivateProfile.DefaultOutboundAction.Value)
+            $output.Add("EnableFirewall",$polXml.Computer.ExtensionData.Extension.PrivateProfile.EnableFirewall.Value)
+            Write-NoEmpties -output $output
+            ""
+        }
+
+        if ($polXml.Computer.ExtensionData.Extension.PublicProfile.EnableFirewall -ne $null) {
+            $output = [ordered]@{}
+            $output.Add("Firewall Profile","PublicProfile")
+            $output.Add("DefaultInboundAction",$polXml.Computer.ExtensionData.Extension.PublicProfile.DefaultInboundAction.Value)
+            $output.Add("DefaultOutboundAction",$polXml.Computer.ExtensionData.Extension.PublicProfile.DefaultOutboundAction.Value)
+            $output.Add("EnableFirewall",$polXml.Computer.ExtensionData.Extension.PublicProfile.EnableFirewall.Value)
+            Write-NoEmpties -output $output
+            ""
+        }
+
+        if ($polXml.Computer.ExtensionData.Extension.DomainProfile.EnableFirewall -ne $null) {
+            $output = [ordered]@{}
+            $output.Add("Firewall Profile","DomainProfile")
+            $output.Add("DefaultInboundAction",$polXml.Computer.ExtensionData.Extension.DomainProfile.DefaultInboundAction.Value)
+            $output.Add("DefaultOutboundAction",$polXml.Computer.ExtensionData.Extension.DomainProfile.DefaultOutboundAction.Value)
+            $output.Add("EnableFirewall",$polXml.Computer.ExtensionData.Extension.DomainProfile.EnableFirewall.Value)
+            Write-NoEmpties -output $output
+            ""
+        }
+
+        if ($level -eq 1) {
+            $settingsInbound = $polXml.Computer.ExtensionData.Extension.InboundFirewallRules
+             $settingsInbound = ($settingsInbound | ? {$_}) 
+            if ($settingsInbound -ne $null) {
+                foreach ($setting in $settingsInbound) {
+                    $output = [ordered]@{}
+                    $output.Add("Inbound Rule Name",$setting.Name)
+                    $output.Add("Action",$setting.Action)
+                    $output.Add("Dir",$setting.Dir)
+                    $output.Add("Profile",$setting.Profile)
+                    $output.Add("Lport",$setting.Lport)
+                    $output.Add("Protocol",$setting.Protocol)
+                    $output.Add("Active",$setting.Active)
+                    $output.Add("App",$setting.App)
+                    $output.Add("Svc",$setting.Svc)
+                    $output.Add("EmbedCtxt",$setting.EmbedCtxt)
+                    Write-NoEmpties -output $output
+                    ""
+                    }
+            }
+
+            $settingsOutbound = $polXml.Computer.ExtensionData.Extension.OutboundFirewallRules
+            $settingsOutbound = ($settingsOutbound | ? {$_}) 
+            if ($settingsOutbound -ne $null) {
+                foreach ($setting in $settingsOutbound) {
+                    $output = [ordered]@{}
+                    $output.Add("Outbound Rule Name",$setting.Name)
+                    $output.Add("Action",$setting.Action)
+                    $output.Add("Dir",$setting.Dir)
+                    $output.Add("Profile",$setting.Profile)
+                    $output.Add("Lport",$setting.Rport)
+                    $output.Add("Protocol",$setting.Protocol)
+                    $output.Add("Active",$setting.Active)
+                    $output.Add("App",$setting.App)
+                    $output.Add("Svc",$setting.Svc)
+                    $output.Add("EmbedCtxt",$setting.EmbedCtxt)
+                    Write-NoEmpties -output $output
+                    ""
+                }
+            }
+        }
+    }
+}
+
 Function Get-GPOIniFiles {
     [cmdletbinding()]
     Param (
@@ -1025,152 +1113,172 @@ Function Get-GPORegSettings {
 
     ######
     # Description: Checks for "Registry Settings" i.e. a bunch of Windows options that are defined via the registry.
-    # Level 3: TBD.
-    # Level 2: Need to generate a list of 'interesting' settings.
+    # Level 3: Shows settings that (if enabled) are going to severely impact the security of a host.
+    # Level 2: Shows 'Interesting' settings, regardless of state.
     # Level 1: All Registry Settings.
     ######
 
-	$settingsRegSettings = ($polXml.ExtensionData.Extension.Policy | Sort-Object GPOSettingOrder)
+    $settingsRegSettings = ($polXml.ExtensionData.Extension.RegistrySetting | Sort-Object GPOSettingOrder)
 
-    if ($settingsRegSettings) {
+    if (($settingsRegSettings) -And ($level -eq 1)) {
+        foreach ($setting in $settingsRegSettings) {
+            $output = @{}
+            $output.Add("KeyPath", $setting.KeyPath)
+            $output.Add("AdmSetting", $setting.AdmSetting)
+            $output.Add($setting.Value.Name, $setting.Value.Number)
+            Write-NoEmpties -output $output
+        }
+    }
 
-        $intRegSettings = @()
-        $intRegSettings += "Allow CredSSP authentication"
-        $intRegSettings += "Allow Basic Authentication"
-        $intRegSettings += "Set the default source path for Update-Help"
-        $intRegSettings += "Default Source Path"
-        $intRegSettings += "Allow remote server management through WinRM"
-        $intRegSettings += "Specify intranet Microsoft update service location"
-        $intRegSettings += "Set the intranet update service for detecting updates:"
-        $intRegSettings += "Set the intranet statistics server:"
-        $intRegSettings += "Allow Remote Shell Access"
-        $intRegSettings += "Allow unencrypted traffic"
-        $intRegSettings += "Sign-in last interactive user automatically after a system-initiated restart"
-        $intRegSettings += "Intranet proxy servers for  apps"
-        $intRegSettings += "Type a proxy server IP address for the intranet"
-        $intRegSettings += "Internet proxy servers for apps"
-        $intRegSettings += "Domain Proxies"
-        $intRegSettings += "Restrict Unauthenticated RPC clients"
-        $intRegSettings += "RPC Runtime Unauthenticated Client Restriction to Apply"
-        $intRegSettings += "Enable RPC Endpoint Mapper Client Authentication"
-        $intRegSettings += "Always install with elevated privileges"
-        $intRegSettings += "Specify communities"
-        $intRegSettings += "Communities"
-        $intRegSettings += "Allow non-administrators to install drivers for these device setup classes"
-        $intRegSettings += "Allow Users to install device drivers for these classes:"
+	$settingsPolicies = ($polXml.ExtensionData.Extension.Policy | Sort-Object GPOSettingOrder)
+
+    if ($settingsPolicies) {
+
+        $intRegPolicies = @()
+        $intRegPolicies += "Allow CredSSP authentication"
+        $intRegPolicies += "Allow Basic Authentication"
+        $intRegPolicies += "Set the default source path for Update-Help"
+        $intRegPolicies += "Default Source Path"
+        $intRegPolicies += "Allow remote server management through WinRM"
+        $intRegPolicies += "Specify intranet Microsoft update service location"
+        $intRegPolicies += "Set the intranet update service for detecting updates:"
+        $intRegPolicies += "Set the intranet statistics server:"
+        $intRegPolicies += "Allow Remote Shell Access"
+        $intRegPolicies += "Allow unencrypted traffic"
+        $intRegPolicies += "Sign-in last interactive user automatically after a system-initiated restart"
+        $intRegPolicies += "Intranet proxy servers for  apps"
+        $intRegPolicies += "Type a proxy server IP address for the intranet"
+        $intRegPolicies += "Internet proxy servers for apps"
+        $intRegPolicies += "Domain Proxies"
+        $intRegPolicies += "Restrict Unauthenticated RPC clients"
+        $intRegPolicies += "RPC Runtime Unauthenticated Client Restriction to Apply"
+        $intRegPolicies += "Enable RPC Endpoint Mapper Client Authentication"
+        $intRegPolicies += "Always install with elevated privileges"
+        $intRegPolicies += "Specify communities"
+        $intRegPolicies += "Communities"
+        $intRegPolicies += "Allow non-administrators to install drivers for these device setup classes"
+        $intRegPolicies += "Allow Users to install device drivers for these classes:"
         #MS Office settings starts here
-        $intRegSettings += "Disable all application add-ins"
-        $intRegSettings += "Require that application add-ins are signed by Trusted Publisher"
-        $intRegSettings += "Turn off trusted documents"
-        $intRegSettings += "Turn off Trusted Documents on the network"
-        $intRegSettings += "Allow Trusted Locations on the network"
-        $intRegSettings += "Disable all trusted locations"
-        $intRegSettings += "Block all unmanaged add-ins"
-        $intRegSettings += "Require that application add-ins are signed by Trusted Publisher"
-        $intRegSettings += "Turn off trusted documents"
-        $intRegSettings += "Turn off Trusted Documents on the network"
-        $intRegSettings += "Scan encrypted macros in Excel Open XML workbooks"
-        $intRegSettings += "Scan encrypted macros in PowerPoint Open XML presentations"
-        $intRegSettings += "Scan encrypted macros in Word Open XML documents"
-        $intRegSettings += "Block macros from running in Office files from the Internet"
-        $intRegSettings += "Disable all application add-ins"
-        $intRegSettings += "Do not open files from the Internet zone in Protected View"
-        $intRegSettings += "Do not open files in unsafe locations in Protected View"
-        $intRegSettings += "Open files on local Intranet UNC in Protected View"
-        $intRegSettings += "Turn off Protected View for attachments opened from Outlook"
-        $intRegSettings += "Disable e-mail forms from the Full Trust security zone"
-        $intRegSettings += "Disable e-mail forms from the Internet security zone"
-        $intRegSettings += "Disable e-mail forms from the Intranet security zone"
-        $intRegSettings += "Disable e-mail forms running in restricted security level"
-        $intRegSettings += "Disable fully trusted solutions full access to computer"
-        $intRegSettings += "Disable opening forms with managed code from the Internet security zone"
-        $intRegSettings += "Disable hyperlink warnings"
-        $intRegSettings += "Disable VBA for Office applications"
-        $intRegSettings += "Prevent Word and Excel from loading managed code extensions"
-        $intRegSettings += "Allow Trusted Locations not on the computer"
-        $intRegSettings += "Disable 'Remember password' for Internet e-mail accounts"
-        $intRegSettings += "Automatically download content for e-mail from people in Safe Senders and Safe Recipients Lists"
-        $intRegSettings += "Do not permit download of content from safe zones"
-        $intRegSettings += "Include Internet in Safe Zones for Automatic Picture Download"
-        $intRegSettings += "Include Intranet in Safe Zones for Automatic Picture Download"
-        $intRegSettings += "Allow in-place activation of embedded OLE objects"
-        $intRegSettings += "Allow scripts in one-off Outlook forms"
-        $intRegSettings += "Apply macro security settings to macros, add-ins, and SmartTags"
-        $intRegSettings += "Do not allow Outlook object model scripts to run for public folders"
-        $intRegSettings += "Do not allow attachment previewing in Outlook"
-        $intRegSettings += "Hide warnings about suspicious names in e-mail addresses"
-        $intRegSettings += "Unblock automatic download of linked images"
-        $intRegSettings += "Allow background open of web pages"
-        $intRegSettings += "Prevent saving credentials for Basic Authentication policy"
-        $intRegSettings += "Apply macro security settings to macros, add-ins and additional actions"
-        $intRegSettings += "Block application add-ins loading"
-        $intRegSettings += "User Templates"
-        $intRegSettings += "Block additional file extensions for OLE embedding"
-        $intRegSettings += "Allow file extensions for OLE embedding"
-        $intRegSettings += "Workgroup templates path"
-        $intRegSettings += "User templates path"
-        $intRegSettings += "User queries path"
-        $intRegSettings += "Chart Templates Server Location"
-        $intRegSettings += "Specify server"
-        $intRegSettings += "Personal tempaltes path for Excel"
-        $intRegSettings += "Personal templates path for Access"
-        $intRegSettings += "Personal templates path for PowerPoint"
-        $intRegSettings += "Personal templates path for Project"
-        $intRegSettings += "Personal templates path for Publisher"
-        $intRegSettings += "Personal templates path for Visio"
-        $intRegSettings += "Personal templates path for Word"
-        $intRegSettings += "User Templates"
-        $intRegSettings += "Embedded Files Blocked Extensions"
-        $intRegSettings += "Location of Backup Folder"
-        $intRegSettings += "Path to DAV server"
-        $intRegSettings += "Add-ons"
-        $intRegSettings += "Start-up"
-        $intRegSettings += "Templates"
-        $intRegSettings += "Tools"
-        $intRegSettings += "Authentication with Exchange Server"
-        $intRegSettings += "Configure Add-In Trust Level"
-        $intRegSettings += "VBA Macro Warning Settings"
-        $intRegSettings += "Excel add-in files"
-        $intRegSettings += "VBA Macro Notification Settings"
-        $intRegSettings += "Security setting for macros"
-        $intRegSettings += "Authentication with Exchange Server"
-        $intRegSettings += "Security setting for macros"
-        $intRegSettings += "Junk E-mail protection level"
-        $intRegSettings += "Run Programs"
-        $intRegSettings += "Authentication with Exchange Server"
-        $intRegSettings += "List of managed add-ins"
-        $intRegSettings += "Trusted Location #1"
-        $intRegSettings += "Trusted Location #2"
-        $intRegSettings += "Trusted Location #3"
-        $intRegSettings += "Trusted Location #4"
-        $intRegSettings += "Trusted Location #5"
-        $intRegSettings += "Trusted Location #6"
-        $intRegSettings += "Trusted Location #7"
-        $intRegSettings += "Trusted Location #8"
-        $intRegSettings += "Trusted Location #9"
-        $intRegSettings += "Trusted Location #10"
-        $intRegSettings += "Trusted Location #11"
-        $intRegSettings += "Trusted Location #12"
-        $intRegSettings += "Trusted Location #13"
-        $intRegSettings += "Trusted Location #14"
-        $intRegSettings += "Trusted Location #15"
-        $intRegSettings += "Trusted Location #16"
-        $intRegSettings += "Trusted Location #17"
-        $intRegSettings += "Trusted Location #18"
-        $intRegSettings += "Trusted Location #19"
-        $intRegSettings += "Trusted Location #20"
+        $intRegPolicies += "Add-ons"
+        $intRegPolicies += "Add-on Management"
+        $intRegPolicies += "Allow background open of web pages"
+        $intRegPolicies += "Allow file extensions for OLE embedding"
+        $intRegPolicies += "Allow in-place activation of embedded OLE objects"
+        $intRegPolicies += "Allow scripts in one-off Outlook forms"
+        $intRegPolicies += "Allow storage of user passwords"
+        $intRegPolicies += "Allow Trusted Locations not on the computer"
+        $intRegPolicies += "Allow Trusted Locations on the network"
+        $intRegPolicies += "Apply macro security settings to macros, add-ins and additional actions"
+        $intRegPolicies += "Apply macro security settings to macros, add-ins, and SmartTags"
+        $intRegPolicies += "Authentication with Exchange Server"
+        $intRegPolicies += "Authentication with Exchange Server"
+        $intRegPolicies += "Authentication with Exchange Server"
+        $intRegPolicies += "Automatically download content for e-mail from people in Safe Senders and Safe Recipients Lists"
+        $intRegPolicies += "Block additional file extensions for OLE embedding"
+        $intRegPolicies += "Block all unmanaged add-ins"
+        $intRegPolicies += "Block application add-ins loading"
+        $intRegPolicies += "Block macros from running in Office files from the Internet"
+        $intRegPolicies += "Chart Templates Server Location"
+        $intRegPolicies += "Configure Add-In Trust Level"
+        $intRegPolicies += "Configure SIP security mode"
+        $intRegPolicies += "Disable 'Remember password' for Internet e-mail accounts"
+        $intRegPolicies += "Disable all application add-ins"
+        $intRegPolicies += "Disable user name and password"
+        $intRegPolicies += "Disable all trusted locations"
+        $intRegPolicies += "Disable Password Caching"
+        $intRegPolicies += "Disable e-mail forms from the Full Trust security zone"
+        $intRegPolicies += "Disable e-mail forms from the Internet security zone"
+        $intRegPolicies += "Disable e-mail forms from the Intranet security zone"
+        $intRegPolicies += "Disable e-mail forms running in restricted security level"
+        $intRegPolicies += "Disable fully trusted solutions full access to computer"
+        $intRegPolicies += "Disable hyperlink warnings"
+        $intRegPolicies += "Disable opening forms with managed code from the Internet security zone"
+        $intRegPolicies += "Disable VBA for Office applications"
+        $intRegPolicies += "Do not allow attachment previewing in Outlook"
+        $intRegPolicies += "Do not allow Outlook object model scripts to run for public folders"
+        $intRegPolicies += "Do not open files from the Internet zone in Protected View"
+        $intRegPolicies += "Do not open files in unsafe locations in Protected View"
+        $intRegPolicies += "Do not permit download of content from safe zones"
+        $intRegPolicies += "Embedded Files Blocked Extensions"
+        $intRegPolicies += "Excel add-in files"
+        $intRegPolicies += "File Previewing"
+        $intRegPolicies += "Hide warnings about suspicious names in e-mail addresses"
+        $intRegPolicies += "Include Internet in Safe Zones for Automatic Picture Download"
+        $intRegPolicies += "Include Intranet in Safe Zones for Automatic Picture Download"
+        $intRegPolicies += "Junk E-mail protection level"
+        $intRegPolicies += "List of managed add-ins"
+        $intRegPolicies += "Location of Backup Folder"
+        $intRegPolicies += "Local Machine Zone Lockdown Security"
+        $intRegPolicies += "Open files on local Intranet UNC in Protected View"
+        $intRegPolicies += "Path to DAV server"
+        $intRegPolicies += "Personal tempaltes path for Excel"
+        $intRegPolicies += "Personal templates path for Access"
+        $intRegPolicies += "Personal templates path for PowerPoint"
+        $intRegPolicies += "Personal templates path for Project"
+        $intRegPolicies += "Personal templates path for Publisher"
+        $intRegPolicies += "Personal templates path for Visio"
+        $intRegPolicies += "Personal templates path for Word"
+        $intRegPolicies += "Prevent saving credentials for Basic Authentication policy"
+        $intRegPolicies += "Prevent Word and Excel from loading managed code extensions"
+        $intRegPolicies += "Protection From Zone Elevation"
+        $intRegPolicies += "Require that application add-ins are signed by Trusted Publisher"
+        $intRegPolicies += "Require that application add-ins are signed by Trusted Publisher"
+        $intRegPolicies += "Require logon credentials"
+        $intRegPolicies += "Run Programs"
+        $intRegPolicies += "Scan encrypted macros in Excel Open XML workbooks"
+        $intRegPolicies += "Scan encrypted macros in PowerPoint Open XML presentations"
+        $intRegPolicies += "Scan encrypted macros in Word Open XML documents"
+        $intRegPolicies += "Security setting for macros"
+        $intRegPolicies += "Security setting for macros"
+        $intRegPolicies += "Specify server"
+        $intRegPolicies += "Start-up"
+        $intRegPolicies += "Templates"
+        $intRegPolicies += "Tools"
+        $intRegPolicies += "Trusted Domain List"
+        $intRegPolicies += "Trusted Location #1"
+        $intRegPolicies += "Trusted Location #10"
+        $intRegPolicies += "Trusted Location #11"
+        $intRegPolicies += "Trusted Location #12"
+        $intRegPolicies += "Trusted Location #13"
+        $intRegPolicies += "Trusted Location #14"
+        $intRegPolicies += "Trusted Location #15"
+        $intRegPolicies += "Trusted Location #16"
+        $intRegPolicies += "Trusted Location #17"
+        $intRegPolicies += "Trusted Location #18"
+        $intRegPolicies += "Trusted Location #19"
+        $intRegPolicies += "Trusted Location #2"
+        $intRegPolicies += "Trusted Location #20"
+        $intRegPolicies += "Trusted Location #3"
+        $intRegPolicies += "Trusted Location #4"
+        $intRegPolicies += "Trusted Location #5"
+        $intRegPolicies += "Trusted Location #6"
+        $intRegPolicies += "Trusted Location #7"
+        $intRegPolicies += "Trusted Location #8"
+        $intRegPolicies += "Trusted Location #9"
+        $intRegPolicies += "Turn off Protected View for attachments opened from Outlook"
+        $intRegPolicies += "Turn off Trusted Documents on the network"
+        $intRegPolicies += "Turn off Trusted Documents on the network"
+        $intRegPolicies += "Turn off trusted documents"
+        $intRegPolicies += "Turn off trusted documents"
+        $intRegPolicies += "Unblock automatic download of linked images"
+        $intRegPolicies += "User queries path"
+        $intRegPolicies += "User templates path"
+        $intRegPolicies += "User Templates"
+        $intRegPolicies += "User Templates"
+        $intRegPolicies += "VBA Macro Notification Settings"
+        $intRegPolicies += "VBA Macro Warning Settings"
+        $intRegPolicies += "Workgroup templates path"
         #MS Office Settings End Here
 
-        $vulnRegSettings = @()
-        $vulnRegSettings += "Always install with elevated privileges"
-        $vulnRegSettings += "Specify communities"
-        $vulnRegSettings += "Communities"
-        $vulnRegSettings += "Allow non-administrators to install drivers for these device setup classes"
-        $vulnRegSettings += "Allow Users to install device drivers for these classes:"
-
+        $vulnRegPolicies = @()
+        $vulnRegPolicies += "Always install with elevated privileges"
+        $vulnRegPolicies += "Specify communities"
+        $vulnRegPolicies += "Communities"
+        $vulnRegPolicies += "Allow non-administrators to install drivers for these device setup classes"
+        $vulnRegPolicies += "Allow Users to install device drivers for these classes:"
 
         # I hate this nested looping shit more than anything I've ever written.
-        foreach ($setting in $settingsRegSettings) {
+        foreach ($setting in $settingsPolicies) {
             if ($true) {
                 $output = @{}
                 $output.Add("Setting Name", $setting.Name)
@@ -1179,7 +1287,7 @@ Function Get-GPORegSettings {
                 $output.Add("Category", $setting.Category)
                 $output.Add("Explain", $setting.Explain)
 
-                if (($level -eq 1) -Or (($level -eq 2) -And ($intRegSettings -Contains $setting.Name)) -Or (($level -eq 3) -And ($vulnRegSettings -Contains $setting.Name))) {
+                if (($level -eq 1) -Or (($level -eq 2) -And ($intRegPolicies -Contains $setting.Name)) -Or (($level -eq 3) -And ($vulnRegPolicies -Contains $setting.Name))) {
                     Write-NoEmpties -output $output
 
                     foreach ($thing in $setting.EditText) {
@@ -1507,6 +1615,7 @@ Function Invoke-AuditGPO {
     $polchecks += {Get-GPOEnvVars -Level $level -polXML $userSettings}
     $polchecks += {Get-GPOShortcuts -Level $level -polXml $userSettings}
     $polchecks += {Get-GPOShortcuts -Level $level -polXml $computerSettings}
+    $polchecks += {Get-GPOFWSettings -Level $level -polXml $xmlgpo}
 
     # Write a pretty green header with the report name and some other nice details
     $headers = @()

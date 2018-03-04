@@ -4,29 +4,45 @@ Get-GPOFolderRedirection - get permissions on target path
 Get firewall configs
 Implement pipelining of Get-GPOReport output
 
-Office:
+WindowsFirewallSettings
+    DomainProfile
+        EnableFirewall
+            Value*
+    PrivateProfile
+        EnableFirewall
+            Value*
+    PublicProfile
+        EnableFirewall
+            Value*
+        DefaultInboundAction.Value
+
+    InboundFirewallRules
+        Action
+        Name
+        Dir
+        Profile *
+        LPort
+        Protocol
+        Active
+        app
+        svc
+        embedctxt
+    
+    OutboundFirewallRules
+        Action
+        Name
+        Dir
+        Rport
+        protocol
+        desc
+        active
+        app
+        embedctxt
 
 RegSettings
-    Policy
-        Name
-        State
-        Explain
-        Category
-*       DropDownList
+    RegistrySetting
+        KeyPath
+        AdmSetting
+        Value
             Name
-*       EditText (possibly multiples)
-            Name
-            State
-            Value
-*       CheckBox
-            Name
-            State
-*       ListBox
-            Name
-            State
-            ExplicitValue
-            Additive
-            Value
-                Element
-                    Name
-                    Data
+            Number

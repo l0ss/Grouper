@@ -1,48 +1,5 @@
 Get-GPOFilePerms - parse SDDL
 Get-GPOAccountSettings - implement filtering
 Get-GPOFolderRedirection - get permissions on target path
-Get firewall configs
 Implement pipelining of Get-GPOReport output
 
-WindowsFirewallSettings
-    DomainProfile
-        EnableFirewall
-            Value*
-    PrivateProfile
-        EnableFirewall
-            Value*
-    PublicProfile
-        EnableFirewall
-            Value*
-        DefaultInboundAction.Value
-
-    InboundFirewallRules
-        Action
-        Name
-        Dir
-        Profile *
-        LPort
-        Protocol
-        Active
-        app
-        svc
-        embedctxt
-    
-    OutboundFirewallRules
-        Action
-        Name
-        Dir
-        Rport
-        protocol
-        desc
-        active
-        app
-        embedctxt
-
-RegSettings
-    RegistrySetting
-        KeyPath
-        AdmSetting
-        Value
-            Name
-            Number

@@ -2,4 +2,4 @@ Get-GPOFilePerms - parse SDDL
 Get-GPOAccountSettings - implement filtering
 Get-GPOFolderRedirection - get permissions on target path
 Implement pipelining of Get-GPOReport output
-
+add screensaver checks

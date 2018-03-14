@@ -327,6 +327,7 @@ Function Get-GPOSchedTasks {
     $GPOisvulnerable = $false
 
     $settingsSchedTasks = ($polXml.Computer.ExtensionData.Extension.ScheduledTasks.Task | Sort-Object GPOSettingOrder)
+    $settingsSchedTasks += ($polXml.Computer.ExtensionData.Extension.ScheduledTasks.TaskV2 | Sort-Object GPOSettingOrder)
 
     if ($settingsSchedTasks) {
         foreach ($setting in $settingsSchedTasks) {
@@ -346,7 +347,7 @@ Function Get-GPOSchedTasks {
             }
 
             #if so, or if we're showing everything, or if there are args and we're at level 2, show the setting.
-            if ((($cpasswordcrypt) -And ($level -le 3)) -Or (($taskArgs) -And ($level -le 2)) -Or ($level -eq 1)) {
+            if ((($cpasswordcrypt) -And ($level -le 3)) -Or ($level -le 2)) {
                 $output = @{}
                 $output.Add("Name", $setting.Properties.name)
                 $output.Add("runAs", $setting.Properties.runAs)

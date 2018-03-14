@@ -326,8 +326,12 @@ Function Get-GPOSchedTasks {
     $GPOisinteresting = $false
     $GPOisvulnerable = $false
 
-    $settingsSchedTasks = ($polXml.Computer.ExtensionData.Extension.ScheduledTasks.Task | Sort-Object GPOSettingOrder)
-    $settingsSchedTasks += ($polXml.Computer.ExtensionData.Extension.ScheduledTasks.TaskV2 | Sort-Object GPOSettingOrder)
+    $tasktypes = @()
+    $tasktypes += $polXml.ExtensionData.Extension.ScheduledTasks.Task
+    $tasktypes += $polXml.ExtensionData.Extension.ScheduledTasks.ImmediateTask
+    $tasktypes += $polXml.ExtensionData.Extension.ScheduledTasks.TaskV2
+
+    $settingsSchedTasks = $tasktypes | Sort-Object GPOSettingOrder
 
     if ($settingsSchedTasks) {
         foreach ($setting in $settingsSchedTasks) {
@@ -1600,7 +1604,8 @@ Function Invoke-AuditGPO {
     $polchecks += {Get-GPOMSIInstallation -Level $level -polXML $userSettings}
     $polchecks += {Get-GPOMSIInstallation -Level $level -polXML $computerSettings}
     $polchecks += {Get-GPOUserRights -Level $level -polXML $xmlgpo}
-    $polchecks += {Get-GPOSchedTasks -Level $level -polXML $xmlgpo}
+    $polchecks += {Get-GPOSchedTasks -Level $level -polXML $computerSettings}
+    $polchecks += {Get-GPOSchedTasks -Level $level -polXML $userSettings}
     $polchecks += {Get-GPOFolderRedirection -Level $level -polXML $xmlgpo}
     $polchecks += {Get-GPOFilePerms -Level $level -polXML $xmlgpo}
     $polchecks += {Get-GPOSecurityOptions -Level $level -polXML $xmlgpo}

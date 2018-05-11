@@ -4,8 +4,9 @@
 .SYNOPSIS
     Consumes a Get-GPOReport XML formatted report and outputs potentially vulnerable settings.
 .DESCRIPTION
+    Consumes a Get-GPOReport XML formatted report and outputs potentially vulnerable settings.
     GPP cpassword decryption function stolen shamelessly from @harmj0y
-    Other small snippets and ideas stolen shamelessly from @sysop_host
+    Lots of assist from @sysop_host
 .EXAMPLE
     So first you need to generate a report on a machine with the Group Policy PS module installed. Do that like this:
 
@@ -20,6 +21,8 @@
     -Level (1, 2, or 3) - adjusts whether to show everything (1) or only interesting (2) or only definitely vulnerable (3) settings. Defaults to 2.
 
     -lazyMode (without -Path) will run the initial generation of the GPOReport for you but will need to be running as a domain user on a domain-joined machine.
+
+    -blurb will provide a little extra description on why you should care about what you're seeing and what you might want to do with it.
 .NOTES
      Author     : Mike Loss - mike@mikeloss.net
 #>
@@ -154,6 +157,12 @@ Function Get-GPOUsers {
         }
     }
 
+    if (($blurb -eq $true) -And ($output)) {
+        Write-Title -Text "Blurb" -DividerChar "-" -Color "Yellow"
+        Write-Output "Entries in here add, change, or remove local users from hosts. If you see a password in here that's probably bad."
+        "`r`n"
+    }
+
     if ($GPOisinteresting) {
         $Global:GPOsWithIntSettings += 1
     }
@@ -227,6 +236,12 @@ Function Get-GPOGroups {
         }
     }
 
+    if (($blurb -eq $true) -And ($output)) {
+        Write-Title -Text "Blurb" -DividerChar "-" -Color "Yellow"
+        Write-Output "These entries make changes to local groups on the hosts. If someone has been added to a highly privileged group that might be useful to you?"
+        "`r`n"
+    }
+
     if ($GPOisinteresting) {
         $Global:GPOsWithIntSettings += 1
     }
@@ -298,6 +313,12 @@ Function Get-GPOUserRights {
                 "`r`n"
             }
         }
+    }
+
+    if (($blurb -eq $true) -And ($output)) {
+        Write-Title -Text "Blurb" -DividerChar "-" -Color "Yellow"
+        Write-Output "This is where you'll see users and groups being assigned interesting privileges on hosts. Google the name of the right being assigned if you wanna know what it does."
+        "`r`n"
     }
 
     if ($GPOisinteresting) {
@@ -376,6 +397,12 @@ Function Get-GPOSchedTasks {
         }
     }
 
+    if (($blurb -eq $true) -And ($output)) {
+        Write-Title -Text "Blurb" -DividerChar "-" -Color "Yellow"
+        Write-Output "These are scheduled tasks being pushed to workstations. Sometimes they have credentials and stuff in them?"
+        "`r`n"
+    }
+
     if ($GPOisinteresting) {
         $Global:GPOsWithIntSettings += 1
     }
@@ -434,6 +461,11 @@ Function Get-GPOMSIInstallation {
                 }
             }
         }
+    }
+
+    if (($blurb -eq $true) -And ($output)) {
+        Write-Output "No blurb yet. I eagerly await your pull request."
+        "`r`n"
     }
 
     if ($GPOisinteresting) {
@@ -495,6 +527,11 @@ Function Get-GPOScripts {
                 }
             }
         }
+    }
+
+    if (($blurb -eq $true) -And ($output)) {
+        Write-Output "No blurb yet. I eagerly await your pull request."
+        "`r`n"
     }
 
     if ($GPOisinteresting) {
@@ -559,6 +596,12 @@ Function Get-GPOFileUpdate {
             }
         }
     }
+
+    if (($blurb -eq $true) -And ($output)) {
+        Write-Output "No blurb yet. I eagerly await your pull request."
+        "`r`n"
+    }
+
     if ($GPOisinteresting) {
         $Global:GPOsWithIntSettings += 1
     }
@@ -594,6 +637,11 @@ Function Get-GPOFilePerms {
                 "`r`n"
             }
         }
+    }
+
+    if (($blurb -eq $true) -And ($output)) {
+        Write-Output "No blurb yet. I eagerly await your pull request."
+        "`r`n"
     }
 }
 
@@ -709,6 +757,11 @@ Function Get-GPOSecurityOptions {
         }
     }
 
+    if (($blurb -eq $true) -And ($output)) {
+        Write-Output "No blurb yet. I eagerly await your pull request."
+        "`r`n"
+    }
+
     if ($GPOisinteresting) {
         $Global:GPOsWithIntSettings += 1
     }
@@ -787,6 +840,11 @@ Function Get-GPORegKeys {
                 "`r`n"
             }
         }
+    }
+
+    if (($blurb -eq $true) -And ($output)) {
+        Write-Output "No blurb yet. I eagerly await your pull request."
+        "`r`n"
     }
 
     # update the global counters
@@ -880,6 +938,11 @@ Function Get-GPOAccountSettings {
         }
     }
 
+    if (($blurb -eq $true) -And ($output)) {
+        Write-Output "No blurb yet. I eagerly await your pull request."
+        "`r`n"
+    }
+
     # update the global counters
     if ($GPOisinteresting) {
         $Global:GPOsWithIntSettings += 1
@@ -948,6 +1011,11 @@ Function Get-GPONetworkShares {
                 "`r`n"
             }
         }
+    }
+
+    if (($blurb -eq $true) -And ($output)) {
+        Write-Output "No blurb yet. I eagerly await your pull request."
+        "`r`n"
     }
 
     if ($GPOisinteresting) {
@@ -1042,6 +1110,12 @@ Function Get-GPOFWSettings {
             }
         }
     }
+
+    if (($blurb -eq $true) -And ($output)) {
+        Write-Output "No blurb yet. I eagerly await your pull request."
+        "`r`n"
+    }
+
 }
 
 Function Get-GPOIniFiles {
@@ -1076,6 +1150,12 @@ Function Get-GPOIniFiles {
             }
         }
     }
+
+    if (($blurb -eq $true) -And ($output)) {
+        Write-Output "No blurb yet. I eagerly await your pull request."
+        "`r`n"
+    }
+
 }
 
 Function Get-GPOEnvVars {
@@ -1107,6 +1187,12 @@ Function Get-GPOEnvVars {
             }
         }
     }
+
+    if (($blurb -eq $true) -And ($output)) {
+        Write-Output "No blurb yet. I eagerly await your pull request."
+        "`r`n"
+    }
+
 }
 
 Function Get-GPORegSettings {
@@ -1347,6 +1433,12 @@ Function Get-GPORegSettings {
             }
         }
     }
+
+    if (($blurb -eq $true) -And ($output)) {
+        Write-Output "No blurb yet. I eagerly await your pull request."
+        "`r`n"
+    }
+
 }
 
 Function Get-GPOShortcuts {
@@ -1411,6 +1503,11 @@ Function Get-GPOShortcuts {
                 }
             }
         }
+    }
+
+    if (($blurb -eq $true) -And ($output)) {
+        Write-Output "No blurb yet. I eagerly await your pull request."
+        "`r`n"
     }
 
     if ($GPOisinteresting) {
@@ -1543,7 +1640,7 @@ Function Find-IntACL {
     try {
         $targetPathACL = Get-ACL $Path -ErrorAction Stop
         $targetPathOwner = $targetPathACL.Owner
-        $targetPathAccess = $targetPathACL.Access | Where-Object {-Not ($boringTrustees -Contains $_.IdentityReference)} | select FileSystemRights,AccessControlType,IdentityReference
+        $targetPathAccess = $targetPathACL.Access | Where-Object {-Not ($boringTrustees -Contains $_.IdentityReference)} | Select-Object FileSystemRights,AccessControlType,IdentityReference
         $ACLData.Add("Owner", $targetPathOwner)
         $ACLData.Add("Trustees", $targetPathAccess)
         Try {
@@ -1558,6 +1655,67 @@ Function Find-IntACL {
         $ACLData.Add("Vulnerable","Error")
     }
     return $ACLData
+}
+
+Function Get-GPOPermissions {
+    Param (
+        [Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()]$GPOPerms
+    )
+
+    # an array of permissions that aren't exciting
+    $boringPerms = @()
+    $boringPerms += "Read"
+    $boringPerms += "Apply Group Policy"
+    # an array of users who have RW permissions on GPOs by default, so they're boring too.
+    $boringTrustees = @()
+    $boringTrustees += "Domain Admins"
+    $boringTrustees += "Enterprise Admins"
+    $boringTrustees += "ENTERPRISE DOMAIN CONTROLLERS"
+    $boringTrustees += "SYSTEM"
+
+    $permBannerPrinted = 0
+    # iterate over each permission entry for the GPO
+    foreach ($GPOACE in $GPOPerms) {
+        $permOutput = @{}
+        $ACEType = $GPOACE.Standard.GPOGroupedAccessEnum # allow v deny
+        $trusteeName = $GPOACE.Trustee.Name.InnerText # who does it apply to
+        $trusteeSID = $GPOACE.Trustee.SID.InnerText # SID of the account/group it applies to
+        $ACEInteresting = $true # ACEs are default interesting unless proven boring.
+        # check if our trustee is a 'boring' default one
+        if ($trusteeName) {
+            foreach ($boringTrustee in $boringTrustees) {
+                if ($trusteeName -match $boringTrustee) {
+                    $ACEInteresting = $false
+                }
+            }
+        }
+        # check if our permission is boring
+        if (($boringPerms -Contains $ACEType) -Or ($GPOACE.Type.PermissionType -eq "Deny")) {
+            $ACEInteresting = $false
+        }
+        # if it's still interesting,
+        if ($ACEInteresting) {
+            #if we have a valid trustee name, add it to the output
+            if ($trusteeName) {
+                $permOutput.Add("Trustee", $trusteeName)
+            }
+            #if we have a SID, add it to the output
+            elseif ($trusteeSID) {
+                $permOutput.Add("Trustee SID", $trusteeSID)
+            }
+            #add our other stuff to the output
+            $permOutput.Add("Type", $GPOACE.Type.PermissionType)
+            $permOutput.Add("Access", $GPOACE.Standard.GPOGroupedAccessEnum)
+        }
+        if ($permOutput.Count -gt 0) {
+            if ($permBannerPrinted -eq 0) {
+                Write-Title -DividerChar "#" -Color "Yellow" -Text "GPO Permissions"
+                $permBannerPrinted = 1
+            }
+            Write-Output $permOutput
+            Write-Output "`n`r"
+        }
+    }
 }
 
 #_____________________________________________________________________
@@ -1623,92 +1781,40 @@ Function Invoke-AuditGPO {
     $polchecks += {Get-GPOShortcuts -Level $level -polXml $computerSettings}
     $polchecks += {Get-GPOFWSettings -Level $level -polXml $xmlgpo}
 
-    # Write a pretty green header with the report name and some other nice details
+    if ($xmlgpo.SecurityDescriptor.Owner.Name.InnerText) {
+        $owner = $xmlgpo.SecurityDescriptor.Owner.Name.InnerText
+    }
+    else {
+        $owner = $xmlgpo.SecurityDescriptor.Owner.SID.InnerText
+    }
+
+    # Construct a pretty green header with the report name and some other nice details
     $headers = @()
     $headers += {'==============================================================='}
     $headers += {'Policy UID: {0}' -f $xmlgpo.Identifier.Identifier.InnerText}
     $headers += {'Policy created on: {0:G}' -f ([DateTime]$xmlgpo.CreatedTime)}
     $headers += {'Policy last modified: {0:G}' -f ([DateTime]$xmlgpo.ModifiedTime)}
-    $headers += {'Policy owner: {0}' -f $xmlgpo.SecurityDescriptor.Owner.Name.InnerText}
+    $headers += {'Policy owner: {0}' -f $owner}
     $headers += {'Linked OU: {0}' -f $gpopath}
     $headers += {'Link enabled: {0}' -f $gpoisenabled}
     $headers += {'==============================================================='}
 
+    # Write the title of the GPO in nice green text
+    Write-ColorText -Color "Green" -Text $xmlgpo.Name
+    # Write the headers from above
+    foreach ($header in $headers) {
+        & $header
+    }
+
+    # Parse and print out the GPO's Permissions
+    $GPOPerms = $xmlgpo.SecurityDescriptor.Permissions.TrusteePermissions
+    Get-GPOPermissions -GPOPerms $GPOPerms
+
     # In each GPO we parse, iterate through the list of checks to see if any of them return anything.
-    $headerprinted = $false
     foreach ($polcheck in $polchecks) {
         $finding = & $polcheck # run the check and store the output
         if ($finding) {
-            # the first time one of the checks returns something, show the user the header with the policy name and so on
-            if (!$headerprinted) {
-                # Increment the total counter of displayed policies.
-                $Global:displayedPols += 1
-                # Write the title of the GPO in nice green text
-                Write-ColorText -Color "Green" -Text $xmlgpo.Name
-                # Write the headers from above
-                foreach ($header in $headers) {
-                    & $header
-                }
-
-                # Parse and print out the GPO's Permissions
-                $GPOPermissions = $xmlgpo.SecurityDescriptor.Permissions.TrusteePermissions
-                # an array of permissions that aren't exciting
-                $boringPerms = @()
-                $boringPerms += "Read"
-                $boringPerms += "Apply Group Policy"
-                # an array of users who have RW permissions on GPOs by default, so they're boring too.
-                $boringTrustees = @()
-                $boringTrustees += "Domain Admins"
-                $boringTrustees += "Enterprise Admins"
-                $boringTrustees += "ENTERPRISE DOMAIN CONTROLLERS"
-                $boringTrustees += "SYSTEM"
-
-                $permOutput = @{}
-
-                # iterate over each permission entry for the GPO
-                foreach ($GPOACE in $GPOPermissions) {
-                    $ACEType = $GPOACE.Standard.GPOGroupedAccessEnum # allow v deny
-                    $trusteeName = $GPOACE.Trustee.Name.InnerText # who does it apply to
-                    $trusteeSID = $GPOACE.Trustee.SID.InnerText # SID of the account/group it applies to
-                    $ACEInteresting = $true # ACEs are default interesting unless proven boring.
-
-                    # check if our trustee is a 'boring' default one
-                    if ($trusteeName) {
-                        foreach ($boringTrustee in $boringTrustees) {
-                            if ($trusteeName -match $boringTrustee) {
-                                $ACEInteresting = $false
-                            }
-                        }
-                    }
-                    # check if our permission is boring
-                    if (($boringPerms -Contains $ACEType) -Or ($GPOACE.Type.PermissionType -eq "Deny")){
-                        $ACEInteresting = $false
-                    }
-
-                    # if it's still interesting,
-                    if ($ACEInteresting) {
-                        #if we have a valid trustee name, add it to the output
-                        if ($trusteeName) {
-                            $permOutput.Add("Trustee",$trusteeName)
-                        }
-                        #if we have a SID, add it to the output
-                        elseif ($trusteeSID) {
-                            $permOutput.Add("Trustee SID", $trusteeSID)
-                        }
-                        #add our other stuff to the output
-                        $permOutput.Add("Type", $GPOACE.Type.PermissionType)
-                        $permOutput.Add("Access", $GPOACE.Standard.GPOGroupedAccessEnum)
-                    }
-                }
-                # then print out the GPO's permissions
-                if ($permOutput.Count -gt 0) {
-                    Write-Title -DividerChar "#" -Color "Yellow" -Text "GPO Permissions"
-                    Write-Output $permOutput "`r`n"
-                }
-
-                # then we set $headerprinted to 1 so we don't print it all again
-                $headerprinted = 1
-           }
+            
             # Then for each actual finding we write the name of the check function that found something.
             $polcheckbits = ($polcheck.ToString()).split(' ')
             $polchecktitle = $polcheckbits[0]
@@ -1727,6 +1833,7 @@ Function Invoke-AuditGPO {
             $finding
         }
     }
+    Write-Output "`r`n"
 	[System.GC]::Collect()
 }
 
@@ -1750,6 +1857,11 @@ Function Invoke-AuditGPOReport {
         [ValidateSet(1,2,3)]
         [int]$level = 2,
 
+        [Parameter(ParameterSetName='WithFile', Mandatory=$false, HelpMessage="Provide extra words to tell users wtf all this output means and what they might want to do with it.")]
+        [Parameter(ParameterSetName='WithoutFile', Mandatory=$false, HelpMessage="Provide extra words to tell users wtf all this output means and what they might want to do with it.")]
+        [Parameter(ParameterSetName='OnlineDomain', Mandatory=$false, HelpMessage="Provide extra words to tell users wtf all this output means and what they might want to do with it.")]
+        [switch]$blurb,
+
         [Parameter(ParameterSetName='OnlineDomain', Mandatory=$true, HelpMessage="Perform online checks by actively contacting DCs within the target domain")]
         [switch]$online,
 
@@ -1758,7 +1870,7 @@ Function Invoke-AuditGPOReport {
         [string]$domain = $env:UserDomain
     )
 
-    # This sucker actually consumes the file, does the stuff, this is the guy, you know?
+    # This sucker actually consumes the file, does the stuff, this is the one, you know?
 
     Write-Banner
 

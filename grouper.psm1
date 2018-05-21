@@ -1736,9 +1736,12 @@ Function Invoke-AuditGPO {
     }
 
     #check if it's linked somewhere
-    $gpopath = $xmlgpo.LinksTo.SOMName
+    #get OU name
+    $gponame = $xmlgpo.LinksTo.SOMName
+    #get OU path
+    $gpopath = $xmlgpo.LinksTo.SOMPath
     #and if it's not, increment our count of GPOs that don't do anything
-    if ((-Not $gpopath) -And (!$Global:showdisabled)) {
+    if ((-Not $gponame) -And (!$Global:showdisabled)) {
         $Global:unlinkedPols += 1
         return $null
     }
@@ -1795,7 +1798,8 @@ Function Invoke-AuditGPO {
     $headers += {'Policy created on: {0:G}' -f ([DateTime]$xmlgpo.CreatedTime)}
     $headers += {'Policy last modified: {0:G}' -f ([DateTime]$xmlgpo.ModifiedTime)}
     $headers += {'Policy owner: {0}' -f $owner}
-    $headers += {'Linked OU: {0}' -f $gpopath}
+    $headers += {'Linked OU name: {0}' -f $gponame}
+    $headers += {'Linked OU full path: {0}' -f $gpopath}
     $headers += {'Link enabled: {0}' -f $gpoisenabled}
     $headers += {'==============================================================='}
 

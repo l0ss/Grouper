@@ -18,6 +18,8 @@
 
     -showDisabled or else by default we just filter out policy objects that aren't enabled or linked anywhere.
 
+    -OUPath will specify path of the OU we want to analyze within the Active Directory (can be used with '-Recurse' to analyze all sub-OUs). Not mandatory.
+
     -Level (1, 2, or 3) - adjusts whether to show everything (1) or only interesting (2) or only definitely vulnerable (3) settings. Defaults to 2.
 
     -lazyMode (without -Path) will run the initial generation of the GPOReport for you but will need to be running as a domain user on a domain-joined machine.
@@ -1736,9 +1738,12 @@ Function Invoke-AuditGPO {
     }
 
     #check if it's linked somewhere
-    $gpopath = $xmlgpo.LinksTo.SOMName
+    #get OU name
+    $gponame = $xmlgpo.LinksTo.SOMName
+    #get OU path
+    $gpopath = $xmlgpo.LinksTo.SOMPath
     #and if it's not, increment our count of GPOs that don't do anything
-    if ((-Not $gpopath) -And (!$Global:showdisabled)) {
+    if ((-Not $gponame) -And (!$Global:showdisabled)) {
         $Global:unlinkedPols += 1
         return $null
     }
@@ -1795,7 +1800,8 @@ Function Invoke-AuditGPO {
     $headers += {'Policy created on: {0:G}' -f ([DateTime]$xmlgpo.CreatedTime)}
     $headers += {'Policy last modified: {0:G}' -f ([DateTime]$xmlgpo.ModifiedTime)}
     $headers += {'Policy owner: {0}' -f $owner}
-    $headers += {'Linked OU: {0}' -f $gpopath}
+    $headers += {'Linked OU name: {0}' -f $gponame}
+    $headers += {'Linked OU full path: {0}' -f $gpopath}
     $headers += {'Link enabled: {0}' -f $gpoisenabled}
     $headers += {'==============================================================='}
 
@@ -1850,6 +1856,13 @@ Function Invoke-AuditGPOReport {
         [Parameter(ParameterSetName='WithoutFile', Mandatory=$false, HelpMessage="Toggle filtering GPOs that aren't linked anywhere")]
         [Parameter(ParameterSetName='OnlineDomain', Mandatory=$false, HelpMessage="Toggle filtering GPOs that aren't linked anywhere")]
         [switch]$showDisabled,
+
+        [Parameter(ParameterSetName='WithFile', Mandatory=$false, HelpMessage="Path to the OU in AD infrastructure")]
+        [ValidateNotNullOrEmpty()]
+        [string]$OUPath,
+
+        [Parameter(ParameterSetName='WithFile', Mandatory=$false)]
+        [switch]$Recurse,
 
         [Parameter(ParameterSetName='WithFile', Mandatory=$false, HelpMessage="Set verbosity level (1 = most verbose, 3 = only show things that are definitely bad)")]
         [Parameter(ParameterSetName='WithoutFile', Mandatory=$false, HelpMessage="Set verbosity level (1 = most verbose, 3 = only show things that are definitely bad)")]
@@ -1937,12 +1950,27 @@ Function Invoke-AuditGPOReport {
     # get all the GPOs into an array
     $xmlgpos = $xmldoc.report.GPO
 
+    $gpocount = 0
+
     # iterate over them running the selected checks
     foreach ($xmlgpo in $xmlgpos) {
+        if ($OUPath){
+            if ($Recurse) {
+                if ($xmlgpo.LinksTo.SOMPath.ToLower() -inotmatch "^$OUPath.*"){
+                    continue
+                }
+            }
+            else {
+                if ($xmlgpo.LinksTo.SOMPath.ToLower() -ne $OUPath.ToLower()){
+                    continue
+                }
+            }
+        }
         Invoke-AuditGPO -xmlgpo $xmlgpo -Level $level
+        $gpocount++
     }
 
-    $gpocount = ($xmlgpos.Count, 1 -ne $null)[0]
+    #$gpocount = ($xmlgpos.Count, 1 -ne $null)[0]
 
     Write-Title -Color "Green" -DividerChar "*" -Text "Stats"
     $stats = @()

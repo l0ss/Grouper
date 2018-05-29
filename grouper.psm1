@@ -16,7 +16,7 @@
 
     "Invoke-AuditGPOReport -Path C:\temp\gporeport.xml"
 
-    -showDisabled or else by default we just filter out policy objects that aren't enabled or linked anywhere.
+    -hideDisabled or else by default we just filter out policy objects that aren't enabled or linked anywhere.
 
     -Level (1, 2, or 3) - adjusts whether to show everything (1) or only interesting (2) or only definitely vulnerable (3) settings. Defaults to 2.
 
@@ -1730,7 +1730,7 @@ Function Invoke-AuditGPO {
     #check the GPO is even enabled
     $gpoisenabled = $xmlgpo.LinksTo.Enabled
     #and if it's not, increment our count of GPOs that don't do anything
-    if (($gpoisenabled -ne "true") -And (!$Global:showdisabled)) {
+    if (($gpoisenabled -ne "true") -And ($Global:hideDisabled)) {
         $Global:unlinkedPols += 1
         return $null
     }
@@ -1738,7 +1738,7 @@ Function Invoke-AuditGPO {
     #check if it's linked somewhere
     $gpopath = $xmlgpo.LinksTo.SOMName
     #and if it's not, increment our count of GPOs that don't do anything
-    if ((-Not $gpopath) -And (!$Global:showdisabled)) {
+    if ((-Not $gpopath) -And ($Global:hideDisabled)) {
         $Global:unlinkedPols += 1
         return $null
     }
@@ -1849,7 +1849,7 @@ Function Invoke-AuditGPOReport {
         [Parameter(ParameterSetName='WithFile', Mandatory=$false, HelpMessage="Toggle filtering GPOs that aren't linked anywhere")]
         [Parameter(ParameterSetName='WithoutFile', Mandatory=$false, HelpMessage="Toggle filtering GPOs that aren't linked anywhere")]
         [Parameter(ParameterSetName='OnlineDomain', Mandatory=$false, HelpMessage="Toggle filtering GPOs that aren't linked anywhere")]
-        [switch]$showDisabled,
+        [switch]$Global:hideDisabled,
 
         [Parameter(ParameterSetName='WithFile', Mandatory=$false, HelpMessage="Set verbosity level (1 = most verbose, 3 = only show things that are definitely bad)")]
         [Parameter(ParameterSetName='WithoutFile', Mandatory=$false, HelpMessage="Set verbosity level (1 = most verbose, 3 = only show things that are definitely bad)")]
@@ -1891,9 +1891,9 @@ Function Invoke-AuditGPOReport {
     $Global:displayedPols = 0
 
     #handle our arguments
-    $Global:showDisabled = $false
-    if ($showDisabled) {
-        $Global:showDisabled = $true
+    $Global:hideDisabled = $false
+    if ($hideDisabled) {
+        $Global:hideDisabled = $true
     }
 
     # quick and dirty check to make sure that if the user said to do 'online' checks that we can actually reach the domain.

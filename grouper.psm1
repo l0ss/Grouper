@@ -59,7 +59,7 @@ $intLowPrivGroups += "Authenticated Users"
 $intLowPrivGroups += "Everyone"
 $intLowPrivGroups += "Users"
 
-# TODO ADD TO THIS LIST
+# TODO ADD TO THIS LIST?
 $intPrivDomGroups = @()
 $intPrivDomGroups += "Domain Admins"
 $intPrivDomGroups += "Administrators"
@@ -88,6 +88,27 @@ $intRights += "SeRemoteInteractiveLogonRight"
 $boringTrustees = @()
 $boringTrustees += "BUILTIN\Administrators"
 $boringTrustees += "NT AUTHORITY\SYSTEM"
+
+# The blurbs for each check displayed if you run with -blurb enabled.
+$blurbs = @{}
+$blurbs.Add("Get-GPOEnvVars", "Environment variables being set. Might find something dumb like an API key or a VM.")
+$blurbs.Add("Get-GPORegSettings", "A bunch more 'misc' security settings, including all the MS Office settings around macros etc.")
+$blurbs.Add("Get-GPOShortcuts", "Creates shortcuts which could provide useful intel on internal applications. Alternatively, if you can modify the target of a shortcut you might be able to replace it with /nasty.")
+$blurbs.Add("Get-GPOPerms", "These are the permissions on the Group Policy Object itself. If you have modify rights here, you can take over any user or computer that the policy applies to.")
+$blurbs.Add("Get-GPOUsers", "Entries in here add, change, or remove local users from hosts. If you see a password in here that's probably bad.")
+$blurbs.Add("Get-GPOGroups", "These entries make changes to local groups on the hosts. If someone has been added to a highly privileged group that might be useful to you?")
+$blurbs.Add("Get-GPOUserRights", "This is where you'll see users and groups being assigned interesting privileges on hosts. Google the name of the right being assigned if you wanna know what it does.")
+$blurbs.Add("Get-GPOSchedTasks", "These are scheduled tasks being pushed to hosts. Sometimes they have credentials and stuff in them?")
+$blurbs.Add("Get-GPOMSIInstallation", "These are MSI files that are being installed via group policy. If you can replace one of them with something nasty you could probably do something evil?")
+$blurbs.Add("Get-GPOScripts", "These are startup and shutdown scripts, that kind of thing. If you can edit one you can probably have a nice time?")
+$blurbs.Add("Get-GPOFileUpdate", "These are all changes being made to files on the target system, either adding new ones, removing existing ones, or updating existing ones. If you can modify the source files you o have a nice time, depending on the file type, if it ever gets executed, etc.")
+$blurbs.Add("Get-GPOFilePerms", "These entries modify file permissions on the target host's file system. Could be useful for identifying privesc vulns, that kind of thing.")
+$blurbs.Add("Get-GPOSecurityOptions", "A lot of these are kind of 'misc' security settings, you'll need to google individual items to understand what each means. If you want Grouper to provide more detail, I eagerly ll request.")
+$blurbs.Add("Get-GPORegKeys", "These are reg keys that are being pushed to target hosts. If they show up in -Level 3 or 2 they're worth a closer look as they probably contain credentials. If you think this ore detail... I eagerly await your pull request.")
+$blurbs.Add("Get-GPONetworkShares", "Defines file shares that should be created on target hosts. Handy recon data basically.")
+$blurbs.Add("Get-GPOFWSettings", "Windows Firewall settings. Might be useful for identifying why a payload isn't working, or which servers are hosting what apps if that's otherwise difficult.")
+$blurbs.Add("Get-GPOIniFiles", "Ini files are an old timey way of doing Windows app configs. You might find some creds in here?")
+$blurbs.Add("Get-GPOAccountSettings", "These are all the settings that define stuff like password policy, some options for how passwords are stored, that kind of thing.")
 
 #____________________ GPO Check functions _______________
 
@@ -152,17 +173,9 @@ Function Get-GPOUsers {
                 $output.Add("UserName", $setting.properties.userName)
                 $output.Add("Password", $($cpasswordclear, "Password Not Set" -ne $null)[0])
                 Write-NoEmpties -output $output
-                "`r`n"
             }
         }
     }
-
-    if (($blurb -eq $true) -And ($output)) {
-        Write-Title -Text "Blurb" -DividerChar "-" -Color "Yellow"
-        Write-Output "Entries in here add, change, or remove local users from hosts. If you see a password in here that's probably bad."
-        "`r`n"
-    }
-
     if ($GPOisinteresting) {
         $Global:GPOsWithIntSettings += 1
     }
@@ -231,15 +244,8 @@ Function Get-GPOGroups {
                     $output.Add("UserName", $member.userName)
                     Write-NoEmpties -output $output
                 }
-                "`r`n"
             }
         }
-    }
-
-    if (($blurb -eq $true) -And ($output)) {
-        Write-Title -Text "Blurb" -DividerChar "-" -Color "Yellow"
-        Write-Output "These entries make changes to local groups on the hosts. If someone has been added to a highly privileged group that might be useful to you?"
-        "`r`n"
     }
 
     if ($GPOisinteresting) {
@@ -310,17 +316,9 @@ Function Get-GPOUserRights {
                 $output.Add("Right", $userRight)
                 $output.Add("Members", $members -join ',')
                 Write-NoEmpties -output $output
-                "`r`n"
             }
         }
     }
-
-    if (($blurb -eq $true) -And ($output)) {
-        Write-Title -Text "Blurb" -DividerChar "-" -Color "Yellow"
-        Write-Output "This is where you'll see users and groups being assigned interesting privileges on hosts. Google the name of the right being assigned if you wanna know what it does."
-        "`r`n"
-    }
-
     if ($GPOisinteresting) {
         $Global:GPOsWithIntSettings += 1
     }
@@ -390,17 +388,10 @@ Function Get-GPOSchedTasks {
                         $output.Add("startHour", $trigger.Trigger.startHour)
                         $output.Add("startMinutes", $trigger.Trigger.startMinutes)
                         Write-NoEmpties -output $output
-                        "`r`n"
                     }
                 }
             }
         }
-    }
-
-    if (($blurb -eq $true) -And ($output)) {
-        Write-Title -Text "Blurb" -DividerChar "-" -Color "Yellow"
-        Write-Output "These are scheduled tasks being pushed to workstations. Sometimes they have credentials and stuff in them?"
-        "`r`n"
     }
 
     if ($GPOisinteresting) {
@@ -463,11 +454,6 @@ Function Get-GPOMSIInstallation {
         }
     }
 
-    if (($blurb -eq $true) -And ($output)) {
-        Write-Output "No blurb yet. I eagerly await your pull request."
-        "`r`n"
-    }
-
     if ($GPOisinteresting) {
         $Global:GPOsWithIntSettings += 1
     }
@@ -527,11 +513,6 @@ Function Get-GPOScripts {
                 }
             }
         }
-    }
-
-    if (($blurb -eq $true) -And ($output)) {
-        Write-Output "No blurb yet. I eagerly await your pull request."
-        "`r`n"
     }
 
     if ($GPOisinteresting) {
@@ -597,11 +578,6 @@ Function Get-GPOFileUpdate {
         }
     }
 
-    if (($blurb -eq $true) -And ($output)) {
-        Write-Output "No blurb yet. I eagerly await your pull request."
-        "`r`n"
-    }
-
     if ($GPOisinteresting) {
         $Global:GPOsWithIntSettings += 1
     }
@@ -634,15 +610,10 @@ Function Get-GPOFilePerms {
                 $output.Add("Path", $setting.Path)
                 $output.Add("SDDL", $setting.SecurityDescriptor.SDDL.innertext)
                 Write-NoEmpties -output $output
-                "`r`n"
             }
         }
     }
 
-    if (($blurb -eq $true) -And ($output)) {
-        Write-Output "No blurb yet. I eagerly await your pull request."
-        "`r`n"
-    }
 }
 
 Function Get-GPOSecurityOptions {
@@ -713,7 +684,6 @@ Function Get-GPOSecurityOptions {
                             }
                             Write-NoEmpties -output $output
                             Write-NoEmpties -output $values
-                            "`r`n"
                         }
                     }
                     if ($foundit -eq 0) {
@@ -726,7 +696,6 @@ Function Get-GPOSecurityOptions {
                                 $values.Add("DisplayBoolean", $setting.Display.Displayboolean)
                                 Write-NoEmpties -output $output
                                 Write-NoEmpties -output $values
-                                "`r`n"
                             }
                         }
                     }
@@ -740,7 +709,6 @@ Function Get-GPOSecurityOptions {
                             $output.Add("SettingNumber",$setting.SettingNumber)
                             $GPOisinteresting = $true
                             Write-NoEmpties -output $output
-                            "`r`n"
                         }
                     }
                     foreach ($SAP in $intSysAccPolStrings) {
@@ -749,19 +717,12 @@ Function Get-GPOSecurityOptions {
                             $output.Add("SettingString",$setting.SettingString)
                             $GPOisinteresting = $true
                             Write-NoEmpties -output $output
-                            "`r`n"
                         }
                     }
                 }
             }
         }
     }
-
-    if (($blurb -eq $true) -And ($output)) {
-        Write-Output "No blurb yet. I eagerly await your pull request."
-        "`r`n"
-    }
-
     if ($GPOisinteresting) {
         $Global:GPOsWithIntSettings += 1
     }
@@ -837,14 +798,8 @@ Function Get-GPORegKeys {
                 $output.Add("Name", $setting.Properties.name)
                 $output.Add("Value", $setting.Properties.value)
                 Write-NoEmpties -output $output
-                "`r`n"
             }
         }
-    }
-
-    if (($blurb -eq $true) -And ($output)) {
-        Write-Output "No blurb yet. I eagerly await your pull request."
-        "`r`n"
     }
 
     # update the global counters
@@ -883,7 +838,6 @@ Function Get-GPOFolderRedirection {
                 $output.Add("Target SID", $setting.Location.SecurityGroup.SID.innertext)
                 $output.Add("ID", $setting.Id)
                 Write-NoEmpties -output $output
-                "`r`n"
             }
         }
     }
@@ -933,14 +887,8 @@ Function Get-GPOAccountSettings {
                 }
                 $output.Add("Type", $setting.Type)
                 Write-NoEmpties -output $output
-                "`r`n"
             }
         }
-    }
-
-    if (($blurb -eq $true) -And ($output)) {
-        Write-Output "No blurb yet. I eagerly await your pull request."
-        "`r`n"
     }
 
     # update the global counters
@@ -973,7 +921,6 @@ Function Get-GPOFolders {
                 $output.Add("Action", $setting.Properties.action)
                 $output.Add("Path", $setting.Properties.path)
                 Write-NoEmpties -output $output
-                "`r`n"
             }
         }
     }
@@ -1008,14 +955,8 @@ Function Get-GPONetworkShares {
                 $output.Add("Path", $setting.Properties.path)
                 $output.Add("Comment", $setting.Properties.comment)
                 Write-NoEmpties -output $output
-                "`r`n"
             }
         }
-    }
-
-    if (($blurb -eq $true) -And ($output)) {
-        Write-Output "No blurb yet. I eagerly await your pull request."
-        "`r`n"
     }
 
     if ($GPOisinteresting) {
@@ -1110,12 +1051,6 @@ Function Get-GPOFWSettings {
             }
         }
     }
-
-    if (($blurb -eq $true) -And ($output)) {
-        Write-Output "No blurb yet. I eagerly await your pull request."
-        "`r`n"
-    }
-
 }
 
 Function Get-GPOIniFiles {
@@ -1146,16 +1081,9 @@ Function Get-GPOIniFiles {
                 $output.Add("Property", $setting.Properties.property)
                 $output.Add("Action", $setting.Properties.action)
                 Write-NoEmpties -output $output
-                "`r`n"
             }
         }
     }
-
-    if (($blurb -eq $true) -And ($output)) {
-        Write-Output "No blurb yet. I eagerly await your pull request."
-        "`r`n"
-    }
-
 }
 
 Function Get-GPOEnvVars {
@@ -1183,14 +1111,8 @@ Function Get-GPOEnvVars {
                 $output.Add("Value", $setting.properties.value)
                 $output.Add("Action", $setting.properties.action)
                 Write-NoEmpties -output $output
-                "`r`n"
             }
         }
-    }
-
-    if (($blurb -eq $true) -And ($output)) {
-        Write-Output "No blurb yet. I eagerly await your pull request."
-        "`r`n"
     }
 
 }
@@ -1428,17 +1350,10 @@ Function Get-GPORegSettings {
                         $output.Add("State", $thing.State)
                         Write-NoEmpties -output $output
                     }
-                    Write-Output "`r`n"
                 }
             }
         }
     }
-
-    if (($blurb -eq $true) -And ($output)) {
-        Write-Output "No blurb yet. I eagerly await your pull request."
-        "`r`n"
-    }
-
 }
 
 Function Get-GPOShortcuts {
@@ -1499,16 +1414,11 @@ Function Get-GPOShortcuts {
                 if ($targetPathAccess) {
                     Write-Title -Text "Permissions on source file:" -DividerChar "-"
                     Write-Output $targetPathAccess
-                    "`r`n"
                 }
             }
         }
     }
 
-    if (($blurb -eq $true) -And ($output)) {
-        Write-Output "No blurb yet. I eagerly await your pull request."
-        "`r`n"
-    }
 
     if ($GPOisinteresting) {
         $Global:GPOsWithIntSettings += 1
@@ -1661,7 +1571,6 @@ Function Get-GPOPermissions {
     Param (
         [Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()]$GPOPerms
     )
-
     # an array of permissions that aren't exciting
     $boringPerms = @()
     $boringPerms += "Read"
@@ -1710,10 +1619,14 @@ Function Get-GPOPermissions {
         if ($permOutput.Count -gt 0) {
             if ($permBannerPrinted -eq 0) {
                 Write-Title -DividerChar "#" -Color "Yellow" -Text "GPO Permissions"
+                if ($blurb) {
+                    Write-Title -DividerChar "-" -Color "Magenta" -Text "But what does that actually mean?"
+                    Write-Output $blurbs['Get-GPOPerms']
+                    "`r`n"
+                } 
                 $permBannerPrinted = 1
             }
             Write-Output $permOutput
-            Write-Output "`n`r"
         }
     }
 }
@@ -1800,6 +1713,7 @@ Function Invoke-AuditGPO {
     $headers += {'==============================================================='}
 
     # Write the title of the GPO in nice green text
+    "`r`n"
     Write-ColorText -Color "Green" -Text $xmlgpo.Name
     # Write the headers from above
     foreach ($header in $headers) {
@@ -1829,11 +1743,17 @@ Function Invoke-AuditGPO {
 
             $polchecktitle = "$polchecktitle - $polchecktype"
             Write-Title -DividerChar "#" -Color "Yellow" -Text $polchecktitle
+            if ($blurb) {
+                Write-Title -DividerChar "-" -Color "Magenta" -Text "But what does that actually mean?"
+                $polname = $polcheckbits[0]
+                Write-Output $blurbs[$polname]
+                "`r`n"
+            } 
             # Write out the actual finding
             $finding
+            Write-Output "`r`n"
         }
     }
-    Write-Output "`r`n"
 	[System.GC]::Collect()
 }
 

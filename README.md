@@ -1,5 +1,7 @@
 # Grouper
 
+DONT USE GROUPER ANY MORE. USE GROUPER2! https://github.com/l0ss/Grouper2
+
 A PowerShell script for helping to find vulnerable settings in AD Group Policy.
 
 ![A picture of a fish](./Epinephelus_malabaricus.jpg)
